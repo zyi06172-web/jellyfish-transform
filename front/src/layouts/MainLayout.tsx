@@ -28,10 +28,10 @@ const MainLayout: React.FC = () => {
   }, [location.pathname])
 
   return (
-    <div className="flova-shell-bg flex h-screen overflow-hidden bg-[#f6f1e8] text-[#1d1d1f]">
-      <aside className="relative z-20 flex w-[96px] shrink-0 flex-col items-center border-r border-white/25 bg-[#f6f1e8]/35 px-3 py-6 shadow-[10px_0_46px_rgba(120,88,52,.026)] backdrop-blur-3xl">
+    <div className="flova-shell-bg flex h-screen overflow-hidden bg-white text-[#1d1d1f]">
+      <aside className="relative z-20 flex w-[96px] shrink-0 flex-col items-center border-r border-white/40 bg-white/52 px-3 py-6 shadow-[10px_0_46px_rgba(0,0,0,.024)] backdrop-blur-3xl">
         <Link to="/projects" className="mb-9 flex flex-col items-center gap-2 no-underline hover:no-underline">
-          <img src="/logo.svg" alt="短剧工厂" className="h-10 w-10 rounded-2xl shadow-[0_10px_26px_rgba(120,88,52,.08)]" />
+          <img src="/logo.svg" alt="短剧工厂" className="h-10 w-10 rounded-2xl shadow-[0_10px_26px_rgba(0,0,0,.045)]" />
           <span className="text-[10px] font-semibold tracking-normal text-black/45">短剧工厂</span>
         </Link>
 

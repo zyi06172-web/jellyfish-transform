@@ -87,8 +87,8 @@ const ProjectLobby: React.FC = () => {
 
   return (
     <div className="relative h-full overflow-y-auto bg-transparent text-[#1d1d1f]">
-      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_5%_4%,rgba(255,59,92,.13),transparent_25%),radial-gradient(circle_at_31%_-4%,rgba(255,184,77,.14),transparent_25%),radial-gradient(circle_at_58%_-3%,rgba(80,220,128,.13),transparent_24%),radial-gradient(circle_at_84%_2%,rgba(90,200,250,.16),transparent_28%),linear-gradient(180deg,#f8f1e7_0%,#fbf7ef_44%,#f7f2ea_100%)]" />
-      <div className="pointer-events-none fixed left-[42%] top-3 h-[360px] w-[780px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_195deg,rgba(255,45,85,.10),rgba(255,149,0,.08),rgba(52,199,89,.08),rgba(90,200,250,.12),rgba(175,82,222,.075),rgba(255,45,85,.10))] blur-3xl" />
+      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_2%_3%,rgba(255,59,92,.08),transparent_24%),radial-gradient(circle_at_31%_-4%,rgba(255,184,77,.07),transparent_25%),radial-gradient(circle_at_58%_-3%,rgba(80,220,128,.07),transparent_24%),radial-gradient(circle_at_84%_2%,rgba(90,200,250,.09),transparent_28%),linear-gradient(180deg,#ffffff_0%,#ffffff_48%,#fbfbfd_100%)]" />
+      <div className="pointer-events-none fixed left-[39%] top-3 h-[360px] w-[780px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_195deg,rgba(255,45,85,.07),rgba(255,149,0,.055),rgba(52,199,89,.055),rgba(90,200,250,.075),rgba(175,82,222,.05),rgba(255,45,85,.07))] blur-3xl" />
 
       <section className="relative px-8 pb-7 pt-8">
         <div className="relative mx-auto flex max-w-[1120px] flex-col items-center">
@@ -111,52 +111,52 @@ const ProjectLobby: React.FC = () => {
           </p>
 
           <div className="flova-prompt-shell mt-10 w-full max-w-[520px] rounded-[28px] p-[1px]">
-            <div className="relative rounded-[27px] bg-white/72 p-4 shadow-[0_22px_62px_rgba(95,56,36,.08)] backdrop-blur-2xl">
-            <Input.TextArea
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              disabled={creating}
-              autoSize={{ minRows: 3, maxRows: 5 }}
-              bordered={false}
-              className="flova-home-input text-[17px]"
-              placeholder="写下剧情大纲、广告创意或长视频想法。创作助理会总结标题并创建项目..."
-              onPressEnter={(event) => {
-                if ((event.metaKey || event.ctrlKey) && canCreate) {
-                  void handleCreateFromPrompt()
-                }
-              }}
-            />
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
-              <Button shape="circle" icon={<PlusOutlined />} className="apple-circle-button" />
-              <Select
-                value={model}
-                onChange={setModel}
-                className="apple-pill-select min-w-[138px]"
-                options={[
-                  { value: '默认创作模型', label: '模型　默认' },
-                  { value: 'Seed 2.0', label: 'Seed 2.0' },
-                  { value: 'Veo', label: 'Veo' },
-                ]}
+            <div className="relative rounded-[27px] bg-white/88 p-4 shadow-[0_22px_62px_rgba(0,0,0,.065)] backdrop-blur-2xl">
+              <Input.TextArea
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                disabled={creating}
+                autoSize={{ minRows: 3, maxRows: 5 }}
+                bordered={false}
+                className="flova-home-input text-[17px]"
+                placeholder="写下剧情大纲、广告创意或长视频想法。创作助理会总结标题并创建项目..."
+                onPressEnter={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && canCreate) {
+                    void handleCreateFromPrompt()
+                  }
+                }}
               />
-              <Button className="apple-pill-button" icon={<GiftOutlined />}>
-                技能
-              </Button>
-              <Button className="apple-pill-button" icon={<VideoCameraOutlined />}>
-                资产库
-              </Button>
-              <div className="ml-auto flex items-center gap-3">
-                <Button shape="circle" icon={<AudioOutlined />} className="apple-circle-button" />
-                <Button
-                  shape="circle"
-                  size="large"
-                  loading={creating}
-                  icon={<ArrowUpOutlined />}
-                  disabled={!canCreate}
-                  onClick={() => void handleCreateFromPrompt()}
-                  className="border-none bg-[#1d1d1f] text-white shadow-lg shadow-black/20"
+              <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                <Button shape="circle" icon={<PlusOutlined />} className="apple-circle-button" />
+                <Select
+                  value={model}
+                  onChange={setModel}
+                  className="apple-pill-select min-w-[138px]"
+                  options={[
+                    { value: '默认创作模型', label: '模型　默认' },
+                    { value: 'Seed 2.0', label: 'Seed 2.0' },
+                    { value: 'Veo', label: 'Veo' },
+                  ]}
                 />
+                <Button className="apple-pill-button" icon={<GiftOutlined />}>
+                  技能
+                </Button>
+                <Button className="apple-pill-button" icon={<VideoCameraOutlined />}>
+                  资产库
+                </Button>
+                <div className="ml-auto flex items-center gap-3">
+                  <Button shape="circle" icon={<AudioOutlined />} className="apple-circle-button" />
+                  <Button
+                    shape="circle"
+                    size="large"
+                    loading={creating}
+                    icon={<ArrowUpOutlined />}
+                    disabled={!canCreate}
+                    onClick={() => void handleCreateFromPrompt()}
+                    className="border-none bg-[#1d1d1f] text-white shadow-lg shadow-black/20"
+                  />
+                </div>
               </div>
-            </div>
             </div>
           </div>
 
