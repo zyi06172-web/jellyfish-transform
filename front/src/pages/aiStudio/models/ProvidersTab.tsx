@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons'
 import { LlmService } from '../../../services/generated/services/LlmService'
 import type { ProviderRead, ProviderStatus, ProviderSupportedRead } from '../../../services/generated'
+import { diagnoseProvider } from '../../../services/llmDiagnostics'
 import {
   PROVIDER_STATUS_MAP,
   SORT_OPTIONS,
@@ -56,7 +57,7 @@ export default function ProvidersTab() {
   const [treeCollapsed, setTreeCollapsed] = useState(false)
   const [providerModalOpen, setProviderModalOpen] = useState(false)
   const [providerEditing, setProviderEditing] = useState<ProviderRead | null>(null)
-  const [testConnecting, setTestConnecting] = useState(false)
+  const [testConnectingId, setTestConnectingId] = useState<string | null>(null)
   const [form] = Form.useForm()
   const { lg } = Grid.useBreakpoint()
   const isLargeScreen = lg ?? false
@@ -140,14 +141,16 @@ export default function ProvidersTab() {
   const handleTestConnection = async (provider?: ProviderRead) => {
     const p = provider ?? selectedProvider
     if (!p) return
-    setTestConnecting(true)
+    setTestConnectingId(p.id)
     try {
-      await new Promise((r) => setTimeout(r, 800))
-      message.success('连接成功')
-    } catch {
-      message.error('连接失败，请检查 Base URL 与 AK/SK')
+      const result = await diagnoseProvider(p.id)
+      if (result.status === 'ok') message.success(result.message)
+      else if (result.status === 'warning') message.warning(result.message)
+      else message.error(result.message)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '连接测试失败')
     } finally {
-      setTestConnecting(false)
+      setTestConnectingId(null)
     }
   }
 
@@ -163,8 +166,8 @@ export default function ProvidersTab() {
           description: values.description ?? null,
           status: values.status ?? null,
         }
-        if (values.api_key && values.api_key !== '********') requestBody.api_key = values.api_key
-        if (values.api_secret && values.api_secret !== '********') requestBody.api_secret = values.api_secret
+        if (values.api_key) requestBody.api_key = values.api_key
+        if (values.api_secret) requestBody.api_secret = values.api_secret
         await LlmService.updateProviderApiV1LlmProvidersProviderIdPatch({
           providerId: providerEditing.id,
           requestBody,
@@ -236,8 +239,8 @@ export default function ProvidersTab() {
         base_url: p.base_url,
         image_base_url: p.image_base_url ?? null,
         video_base_url: p.video_base_url ?? null,
-        api_key: '********',
-        api_secret: '********',
+        api_key: undefined,
+        api_secret: undefined,
         description: p.description,
         status: p.status ?? 'active',
       })
@@ -315,6 +318,7 @@ export default function ProvidersTab() {
               size="small"
               className={TABLE_ACTION_BTN_TEST_CLASS}
               icon={<ThunderboltOutlined />}
+              loading={testConnectingId === record.id}
               onClick={(e) => {
                 e.stopPropagation()
                 void handleTestConnection(record)
@@ -496,6 +500,7 @@ export default function ProvidersTab() {
                       type="text"
                       size="small"
                       icon={<ThunderboltOutlined />}
+                      loading={testConnectingId === p.id}
                       onClick={(e) => {
                         e.stopPropagation()
                         handleTestConnection(p)
@@ -592,7 +597,7 @@ export default function ProvidersTab() {
                 </Button>
                 <Button
                   icon={<ThunderboltOutlined />}
-                  loading={testConnecting}
+                  loading={testConnectingId === selectedProvider.id}
                   onClick={() => handleTestConnection()}
                 >
                   测试连接
@@ -637,6 +642,7 @@ export default function ProvidersTab() {
                 </Button>
                 <Button
                   icon={<ThunderboltOutlined />}
+                  loading={testConnectingId === selectedProvider.id}
                   onClick={() => handleTestConnection()}
                 >
                   测试连接
@@ -684,10 +690,10 @@ export default function ProvidersTab() {
           <Form.Item name="video_base_url" label="视频 Base URL（可选覆盖）" rules={[{ type: 'url', message: '请输入有效 URL' }]}>
             <Input placeholder="留空则回退到文本/通用 Base URL" />
           </Form.Item>
-          <Form.Item name="api_key" label="API Key" help={providerEditing ? '留空则不修改' : '请勿分享密钥'}>
+          <Form.Item name="api_key" label="API Key" help={providerEditing ? '留空则保留原密钥；填写新值才会覆盖' : '请勿分享密钥'}>
             <Input.Password placeholder="AK" />
           </Form.Item>
-          <Form.Item name="api_secret" label="API Secret" help={providerEditing ? '留空则不修改' : undefined}>
+          <Form.Item name="api_secret" label="API Secret" help={providerEditing ? '留空则保留原密钥；填写新值才会覆盖' : undefined}>
             <Input.Password placeholder="SK" />
           </Form.Item>
           <Form.Item name="description" label="描述">

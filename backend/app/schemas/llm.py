@@ -72,6 +72,16 @@ class ProviderSupportedRead(BaseModel):
     is_experimental: bool = Field(False, description="是否实验性供应商")
 
 
+class LlmDiagnosticRead(BaseModel):
+    """模型与供应商诊断结果，使用 ok/warning/error 三态表达真实就绪度。"""
+
+    status: str = Field(..., description="诊断状态：ok/warning/error")
+    message: str = Field(..., description="面向用户的诊断摘要")
+    checked_url: str | None = Field(None, description="本次诊断访问的脱敏 URL")
+    provider: str | None = Field(None, description="供应商稳定键")
+    model_id: str | None = Field(None, description="被诊断的模型 ID")
+
+
 class VideoGenerationOptionsRead(BaseModel):
     """当前默认视频模型对应的生成参数选项。"""
 

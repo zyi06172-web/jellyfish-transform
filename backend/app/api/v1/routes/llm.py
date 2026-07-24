@@ -10,6 +10,7 @@ from app.models.llm import ModelCategoryKey
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, success_response
 from app.schemas.llm import (
     ImageGenerationOptionsRead,
+    LlmDiagnosticRead,
     ModelCreate,
     ModelRead,
     ModelSettingsRead,
@@ -37,6 +38,10 @@ from app.services.llm.manage import (
     update_model as update_model_service,
     update_model_settings as update_model_settings_service,
     update_provider as update_provider_service,
+)
+from app.services.llm.diagnostics import (
+    diagnose_model_generation,
+    diagnose_provider_connection,
 )
 
 router = APIRouter()
@@ -138,6 +143,19 @@ async def get_provider(
     return success_response(ProviderRead.model_validate(provider))
 
 
+@router.post(
+    "/providers/{provider_id}/diagnose",
+    response_model=ApiResponse[LlmDiagnosticRead],
+    summary="真实测试供应商连接",
+)
+async def diagnose_provider(
+    provider_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[LlmDiagnosticRead]:
+    data = await diagnose_provider_connection(db, provider_id=provider_id)
+    return success_response(data)
+
+
 @router.patch(
     "/providers/{provider_id}",
     response_model=ApiResponse[ProviderRead],
@@ -222,6 +240,19 @@ async def get_model(
 ) -> ApiResponse[ModelRead]:
     model = await get_model_service(db, model_id=model_id)
     return success_response(ModelRead.model_validate(model))
+
+
+@router.post(
+    "/models/{model_id}/diagnose",
+    response_model=ApiResponse[LlmDiagnosticRead],
+    summary="真实测试模型可用性",
+)
+async def diagnose_model(
+    model_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[LlmDiagnosticRead]:
+    data = await diagnose_model_generation(db, model_id=model_id)
+    return success_response(data)
 
 
 @router.patch(

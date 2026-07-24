@@ -33,6 +33,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import { LlmService } from '../../../services/generated/services/LlmService'
+import { diagnoseModel } from '../../../services/llmDiagnostics'
 import type {
   ModelRead,
   ModelCategoryKey,
@@ -63,6 +64,7 @@ export default function ModelsTab() {
   const [categoryFilter, setCategoryFilter] = useState<ModelCategoryKey | null>(null)
   const [modelModalOpen, setModelModalOpen] = useState(false)
   const [modelEditing, setModelEditing] = useState<ModelRead | null>(null)
+  const [testingModelId, setTestingModelId] = useState<string | null>(null)
   const [providerOptionsLoading, setProviderOptionsLoading] = useState(true)
   const [form] = Form.useForm()
   const selectedFormCategory = Form.useWatch<ModelCategoryKey | undefined>('category', form)
@@ -247,6 +249,20 @@ export default function ModelsTab() {
     })
   }
 
+  const handleTestModel = async (m: ModelRead) => {
+    setTestingModelId(m.id)
+    try {
+      const result = await diagnoseModel(m.id)
+      if (result.status === 'ok') message.success(result.message)
+      else if (result.status === 'warning') message.warning(result.message)
+      else message.error(result.message)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '模型测试失败')
+    } finally {
+      setTestingModelId(null)
+    }
+  }
+
   const openModelModal = (m?: ModelRead) => {
     setModelEditing(m ?? null)
     if (m) {
@@ -355,8 +371,10 @@ export default function ModelsTab() {
               size="small"
               className={TABLE_ACTION_BTN_TEST_CLASS}
               icon={<ThunderboltOutlined />}
+              loading={testingModelId === record.id}
               onClick={(e) => {
                 e.stopPropagation()
+                void handleTestModel(record)
               }}
             />
           </Tooltip>
@@ -543,7 +561,17 @@ export default function ModelsTab() {
                     >
                       编辑
                     </Button>,
-                    <Button key="test" type="text" size="small" icon={<ThunderboltOutlined />}>
+                    <Button
+                      key="test"
+                      type="text"
+                      size="small"
+                      icon={<ThunderboltOutlined />}
+                      loading={testingModelId === m.id}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void handleTestModel(m)
+                      }}
+                    >
                       测试生成
                     </Button>,
                     <Dropdown
@@ -641,7 +669,13 @@ export default function ModelsTab() {
                 >
                   编辑
                 </Button>
-                <Button icon={<ThunderboltOutlined />}>快速测试</Button>
+                <Button
+                  icon={<ThunderboltOutlined />}
+                  loading={testingModelId === selectedModel.id}
+                  onClick={() => void handleTestModel(selectedModel)}
+                >
+                  快速测试
+                </Button>
               </Space>
             </div>
           </div>
@@ -674,7 +708,13 @@ export default function ModelsTab() {
                 >
                   编辑
                 </Button>
-                <Button icon={<ThunderboltOutlined />}>快速测试</Button>
+                <Button
+                  icon={<ThunderboltOutlined />}
+                  loading={testingModelId === selectedModel.id}
+                  onClick={() => void handleTestModel(selectedModel)}
+                >
+                  快速测试
+                </Button>
               </Space>
             </div>
           </Drawer>
@@ -694,8 +734,13 @@ export default function ModelsTab() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" className="pt-2">
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <Input placeholder="例如：GPT-4" />
+          <Form.Item
+            name="name"
+            label="模型 ID / 名称"
+            help="请填写供应商 API 真实使用的 model 字符串，例如 gpt-4.1、gpt-image-1 或 doubao-seedance-1-0-pro。"
+            rules={[{ required: true }]}
+          >
+            <Input placeholder="例如：gpt-4.1" />
           </Form.Item>
           <Form.Item name="category" label="类别" rules={[{ required: true }]}>
             <Select options={MODEL_CATEGORIES.map((c) => ({ label: c.label, value: c.key }))} />
