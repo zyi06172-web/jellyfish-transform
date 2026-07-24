@@ -70,7 +70,7 @@ export function createHomeProjectId() {
   return `p_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
-/** 模拟首页 Agent 对剧情大纲的标题总结，后续可替换为真实标题生成适配器。 */
+/** 生成首页项目标题，先用本地规则模拟标题总结，后续可替换为真实生成适配器。 */
 export function summarizeHomeProjectTitle(prompt: string, mode: SkillMode) {
   const cleaned = prompt
     .replace(/\s+/g, ' ')
@@ -99,8 +99,8 @@ export function prepareHomeProjectCreationDraft(args: {
       id: args.id,
       name: title,
       description: [
-        `Skill: ${args.skill.title}`,
-        `Model: ${args.model}`,
+        `技能：${args.skill.title}`,
+        `模型：${args.model}`,
         '',
         content,
       ].join('\n'),

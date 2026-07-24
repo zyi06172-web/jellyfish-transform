@@ -1,32 +1,3 @@
-/* App-specific styles */
-.app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2rem 0;
-  margin-bottom: 2rem;
-  border-radius: 8px;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
 /* Tailwind and Ant Design compatibility */
 .ant-card {
   border: 1px solid #f0f0f0;
@@ -64,28 +35,6 @@
 .flova-chat-input::placeholder,
 .flova-chat-input textarea::placeholder {
   color: rgba(0, 0, 0, 0.32) !important;
-}
-
-.flova-pill-button.ant-btn,
-.flova-pill-select .ant-select-selector {
-  height: 40px !important;
-  border-radius: 999px !important;
-  border-color: rgba(0, 0, 0, 0.08) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  color: rgba(0, 0, 0, 0.62) !important;
-}
-
-.flova-pill-select .ant-select-selection-item {
-  color: rgba(0, 0, 0, 0.62) !important;
-  line-height: 38px !important;
-}
-
-.flova-dark-select .ant-select-item {
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.flova-dark-select {
-  background: #101010;
 }
 
 .flova-project-card.ant-card {

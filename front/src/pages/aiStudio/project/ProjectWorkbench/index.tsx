@@ -18,6 +18,9 @@ import { getChapterStudioPath } from './routes'
 
 type AgentStep = 'format' | 'characters' | 'audio' | 'animation'
 
+const workspacePanelClass =
+  'flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl'
+
 const stepCopy: Record<AgentStep, { title: string; body: string; action: string; detail: string }> = {
   format: {
     title: '确认制作方向',
@@ -47,11 +50,11 @@ const stepCopy: Record<AgentStep, { title: string; body: string; action: string;
 
 const steps: AgentStep[] = ['format', 'characters', 'audio', 'animation']
 
-/** 从项目描述中抽取用户原始剧情，隐藏首页写入的 Skill/Model 元信息。 */
+/** 从项目描述中抽取用户原始剧情，隐藏首页写入的技能和模型元信息。 */
 function extractStory(description?: string | null) {
   const text = description ?? ''
   const parts = text.split(/\n\s*\n/)
-  return (parts[1] ?? text).trim() || '用户还没有写入剧情大纲，Agent 会先等待新的创作指令。'
+  return (parts[1] ?? text).trim() || '用户还没有写入剧情大纲，创作助理会先等待新的创作指令。'
 }
 
 /** 生成三栏工作台里展示用的关键元素，第一版先基于短剧常见结构模拟。 */
@@ -73,6 +76,7 @@ function buildKeyElements(story: string) {
   ]
 }
 
+/** 三栏项目工作台：把故事板、预览和互动式创作助理放在同一制作画布中。 */
 const ProjectWorkbench: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
@@ -87,21 +91,23 @@ const ProjectWorkbench: React.FC = () => {
   const activeStepIndex = steps.indexOf(activeStep)
   const activeStepCopy = stepCopy[activeStep]
 
+  /** 推进右侧问题卡步骤，让用户按格式、角色、音频和动画顺序确认。 */
   const advanceStep = () => {
     const next = steps[Math.min(activeStepIndex + 1, steps.length - 1)]
     setAgentNotes((prev) => [...prev, activeStepCopy.action])
     setActiveStep(next)
   }
 
-  const submitFreeMessage = () => {
+  /** 记录用户自由反馈，局部调整偏好先写入当前工作台的临时对话记录。 */
+  const submitUserFeedback = () => {
     const text = messageText.trim()
     if (!text) return
     setAgentNotes((prev) => [
       ...prev,
       `用户反馈：${text}`,
       text.includes('女主') || text.includes('不好看')
-        ? 'Agent：我会只重生成女主角参考图，并保持场景、音频和分镜进度不变。'
-        : 'Agent：收到，我会把这个偏好写入当前项目记忆，并在后续生成中保持一致。',
+        ? '创作助理：我会只重生成女主角参考图，并保持场景、音频和分镜进度不变。'
+        : '创作助理：收到，我会把这个偏好写入当前项目记忆，并在后续生成中保持一致。',
     ])
     setMessageText('')
   }
@@ -123,7 +129,7 @@ const ProjectWorkbench: React.FC = () => {
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[320px_minmax(360px,1fr)_520px] gap-4 overflow-hidden bg-[#f5f5f7] p-4 text-[#1d1d1f]">
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+      <aside className={workspacePanelClass}>
         <div className="flex h-16 items-center justify-between border-b border-black/5 px-5">
           <div className="flex items-center gap-3 text-xl font-semibold">
             <DownOutlined className="text-xs text-black/35" />
@@ -182,7 +188,7 @@ const ProjectWorkbench: React.FC = () => {
         </div>
       </aside>
 
-      <main className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+      <main className={workspacePanelClass}>
         <div className="flex h-16 items-center justify-between border-b border-black/5 px-5">
           <div className="min-w-0 text-xl font-semibold">
             预览 <span className="text-base font-normal text-black/28">女主角参考图</span>
@@ -223,9 +229,9 @@ const ProjectWorkbench: React.FC = () => {
         </div>
       </main>
 
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+      <aside className={workspacePanelClass}>
         <div className="flex h-16 items-center justify-between border-b border-black/5 px-6">
-          <div className="text-xl font-semibold">Agent 对话</div>
+          <div className="text-xl font-semibold">助理对话</div>
           <Button shape="circle" type="text" className="text-black/38">×</Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
@@ -288,7 +294,7 @@ const ProjectWorkbench: React.FC = () => {
               className="flova-chat-input"
               placeholder="输入你的修改意见，例如：女主不够好看，重新生成一个..."
               onPressEnter={(event) => {
-                if (event.metaKey || event.ctrlKey) submitFreeMessage()
+                if (event.metaKey || event.ctrlKey) submitUserFeedback()
               }}
             />
             <div className="mt-3 flex items-center gap-3">
@@ -296,7 +302,7 @@ const ProjectWorkbench: React.FC = () => {
               <Button shape="circle" icon={<AppstoreOutlined />} />
               <Button shape="circle" icon={<PictureOutlined />} />
               <Button shape="circle" icon={<AudioOutlined />} className="ml-auto" />
-              <Button shape="circle" icon={<ArrowUpOutlined />} onClick={submitFreeMessage} />
+              <Button shape="circle" icon={<ArrowUpOutlined />} onClick={submitUserFeedback} />
             </div>
           </div>
         </div>

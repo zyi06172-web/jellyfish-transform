@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
 import { Link, Outlet, useLocation } from 'react-router-dom'
+import { TaskRuntimeProvider } from '../pages/aiStudio/components/TaskRuntimeProvider'
 
 type NavItem = {
   key: string
@@ -15,7 +16,7 @@ const navItems: NavItem[] = [
   { key: 'tv', label: '社区TV', href: '/community-tv', icon: <PlaySquareOutlined /> },
 ]
 
-/** 极简全局外壳：去掉传统后台顶部栏和任务中心，让主页/工作台拥有完整画布。 */
+/** 极简全局外壳：隐藏可见任务中心，同时保留任务运行上下文给业务页面使用。 */
 const MainLayout: React.FC = () => {
   const location = useLocation()
 
@@ -53,9 +54,11 @@ const MainLayout: React.FC = () => {
         </nav>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-auto">
-        <Outlet />
-      </main>
+      <TaskRuntimeProvider>
+        <main className="min-w-0 flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </TaskRuntimeProvider>
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
   type SkillMode,
 } from './homeProjectCreation'
 
+/** Flova 型首页：承接用户输入、创建项目，并把新项目即时放回最近项目。 */
 const ProjectLobby: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<HomeProjectCard[]>([])
@@ -33,6 +34,7 @@ const ProjectLobby: React.FC = () => {
     [selectedSkill],
   )
 
+  /** 读取最近项目，让首页底部始终可以恢复之前的创作上下文。 */
   const loadProjects = async () => {
     setLoadingProjects(true)
     try {
@@ -52,6 +54,7 @@ const ProjectLobby: React.FC = () => {
     void loadProjects()
   }, [])
 
+  /** 将首页输入转成项目创建请求，并在创建成功后进入对应项目工作台。 */
   const handleCreateFromPrompt = async () => {
     const content = prompt.trim()
     if (!content) {
@@ -91,11 +94,11 @@ const ProjectLobby: React.FC = () => {
         <div className="relative mx-auto flex max-w-[1120px] flex-col items-center">
           <div className="mb-8 flex w-full items-center justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold text-black/42">AI 视频创作 Agent</div>
+              <div className="text-xs font-semibold text-black/42">智能视频创作助理</div>
               <div className="mt-1 text-base font-semibold">短剧工厂</div>
             </div>
             <div className="rounded-full border border-black/5 bg-white/70 px-4 py-2 text-xs font-semibold text-black/56 shadow-sm backdrop-blur-2xl">
-              当前计划：Free
+              当前计划：免费版
             </div>
           </div>
 
@@ -104,7 +107,7 @@ const ProjectLobby: React.FC = () => {
             <span className="block">一条视频生产线</span>
           </h1>
           <p className="mt-5 max-w-[660px] text-center text-lg leading-relaxed text-black/43">
-            把灵感交给 Agent，它会理解叙事意图，整理角色与镜头，并把每一次创作沉淀成可继续推进的项目。
+            把灵感交给创作助理，它会理解叙事意图，整理角色与镜头，并把每一次创作沉淀成可继续推进的项目。
           </p>
 
           <div className="mt-10 w-full max-w-[920px] rounded-[32px] border border-black/8 bg-white/78 p-5 shadow-[0_26px_76px_rgba(0,0,0,.09)] backdrop-blur-2xl">
@@ -115,7 +118,7 @@ const ProjectLobby: React.FC = () => {
               autoSize={{ minRows: 4, maxRows: 8 }}
               bordered={false}
               className="flova-home-input text-[20px]"
-              placeholder="写下剧情大纲、广告创意或长视频想法。Agent 会总结标题并创建项目..."
+              placeholder="写下剧情大纲、广告创意或长视频想法。创作助理会总结标题并创建项目..."
               onPressEnter={(event) => {
                 if ((event.metaKey || event.ctrlKey) && canCreate) {
                   void handleCreateFromPrompt()
@@ -135,7 +138,7 @@ const ProjectLobby: React.FC = () => {
                 ]}
               />
               <Button className="apple-pill-button" icon={<GiftOutlined />}>
-                Skill
+                技能
               </Button>
               <Button className="apple-pill-button" icon={<VideoCameraOutlined />}>
                 资产库
@@ -225,7 +228,7 @@ const ProjectLobby: React.FC = () => {
                   </Tag>
                 </div>
                 <div className="truncate text-base font-semibold text-[#1d1d1f]">{project.name}</div>
-                <div className="mt-1 line-clamp-1 text-xs text-black/42">{project.description || 'Agent 创建的项目'}</div>
+                <div className="mt-1 line-clamp-1 text-xs text-black/42">{project.description || '创作助理创建的项目'}</div>
               </div>
             </Card>
           ))}
