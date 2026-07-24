@@ -20,6 +20,7 @@ import AgentEdit from './pages/aiStudio/agents/AgentEdit.tsx'
 import ModelManagement from './pages/aiStudio/models/ModelManagement'
 import { ChapterShotsPage } from './pages/aiStudio/shots/ChapterShotsPage'
 import { ChapterShotEditPage } from './pages/aiStudio/shots/ChapterShotEditPage'
+import CommunityTV from './pages/aiStudio/community/CommunityTV'
 import './App.css'
 
 const App: React.FC = () => {
@@ -48,6 +49,7 @@ const App: React.FC = () => {
           <Route path="agents" element={<AgentManagement />} />
           <Route path="models" element={<ModelManagement />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="community-tv" element={<CommunityTV />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
@@ -56,4 +58,3 @@ const App: React.FC = () => {
 }
 
 export default App
-

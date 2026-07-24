@@ -62,3 +62,50 @@
   animation: fadeIn 0.25s ease-out;
 }
 
+.flova-home-input,
+.flova-home-input textarea,
+.flova-chat-input,
+.flova-chat-input textarea {
+  color: rgba(255, 255, 255, 0.88) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.flova-home-input::placeholder,
+.flova-home-input textarea::placeholder,
+.flova-chat-input::placeholder,
+.flova-chat-input textarea::placeholder {
+  color: rgba(255, 255, 255, 0.32) !important;
+}
+
+.flova-pill-button.ant-btn,
+.flova-pill-select .ant-select-selector {
+  height: 40px !important;
+  border-radius: 999px !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.flova-pill-select .ant-select-selection-item {
+  color: rgba(255, 255, 255, 0.72) !important;
+  line-height: 38px !important;
+}
+
+.flova-dark-select .ant-select-item {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.flova-dark-select {
+  background: #101010;
+}
+
+.flova-project-card.ant-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #101010;
+}
+
+.flova-project-card.ant-card:hover {
+  border-color: rgba(169, 200, 107, 0.62);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+}
