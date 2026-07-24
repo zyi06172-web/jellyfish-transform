@@ -9,6 +9,18 @@ type ChapterStudioVideoReadinessPanelProps = {
   videoReferenceMode: string
 }
 
+type ReadinessCheckStatus = 'ok' | 'warning' | 'error'
+
+function getReadinessCheckStatus(check: { ok: boolean; status?: ReadinessCheckStatus }): ReadinessCheckStatus {
+  return check.status ?? (check.ok ? 'ok' : 'error')
+}
+
+function readinessTagMeta(status: ReadinessCheckStatus) {
+  if (status === 'ok') return { color: 'green', text: '通过' }
+  if (status === 'warning') return { color: 'gold', text: '提醒' }
+  return { color: 'red', text: '阻塞' }
+}
+
 export function ChapterStudioVideoReadinessPanel({
   selectedShot,
   videoReadinessLoading,
@@ -48,22 +60,30 @@ export function ChapterStudioVideoReadinessPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {(videoReadiness.checks ?? []).map((check) => (
-              <Tooltip key={check.key} title={check.message}>
-                <Tag color={check.ok ? 'green' : 'default'}>
-                  {check.ok ? '通过' : '未通过'} · {check.key}
-                </Tag>
-              </Tooltip>
-            ))}
+            {(videoReadiness.checks ?? []).map((check) => {
+              const meta = readinessTagMeta(getReadinessCheckStatus(check))
+              return (
+                <Tooltip key={check.key} title={check.message}>
+                  <Tag color={meta.color}>
+                    {meta.text} · {check.key}
+                  </Tag>
+                </Tooltip>
+              )
+            })}
           </div>
 
-          {(videoReadiness.checks ?? []).some((check) => !check.ok) ? (
+          {(videoReadiness.checks ?? []).some((check) => getReadinessCheckStatus(check) !== 'ok') ? (
             <div className="space-y-1">
-              {(videoReadiness.checks ?? []).filter((check) => !check.ok).map((check) => (
-                <div key={check.key} className="text-xs text-gray-600">
-                  • {check.message}
-                </div>
-              ))}
+              {(videoReadiness.checks ?? [])
+                .filter((check) => getReadinessCheckStatus(check) !== 'ok')
+                .map((check) => {
+                  const status = getReadinessCheckStatus(check)
+                  return (
+                    <div key={check.key} className={status === 'warning' ? 'text-xs text-amber-700' : 'text-xs text-red-600'}>
+                      • {check.message}
+                    </div>
+                  )
+                })}
             </div>
           ) : null}
         </div>

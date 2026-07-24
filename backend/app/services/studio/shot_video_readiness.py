@@ -43,8 +43,16 @@ _ACTIVE_TASK_STATUSES = (
 )
 
 
-def _check(key: str, ok: bool, message: str) -> ShotVideoReadinessCheck:
-    return ShotVideoReadinessCheck(key=key, ok=ok, message=message)
+def _check(
+    key: str,
+    ok: bool,
+    message: str,
+    *,
+    status: str | None = None,
+) -> ShotVideoReadinessCheck:
+    """构造准备度检查项，并兼容旧版 ok 布尔语义。"""
+    resolved_status = status or ("ok" if ok else "error")
+    return ShotVideoReadinessCheck(key=key, ok=ok, status=resolved_status, message=message)
 
 
 async def _count_pending_candidates(db: AsyncSession, *, shot_id: str) -> tuple[int, int]:
@@ -84,7 +92,12 @@ async def _reference_frames_ready(
     if required_frames is None:
         return _check("reference_frames_ready", False, f"未知参考模式：{reference_mode}")
     if not required_frames:
-        return _check("reference_frames_ready", True, "当前参考模式不需要参考帧")
+        return _check(
+            "reference_frames_ready",
+            True,
+            "当前参考模式不需要参考帧",
+            status="warning",
+        )
 
     stmt = select(ShotFrameImage).where(
         ShotFrameImage.shot_detail_id == shot_id,
@@ -177,17 +190,24 @@ async def get_shot_video_readiness(
             ),
         )
         prompt_ok = bool(preview.rendered_prompt.strip())
-        prompt_message = "视频提示词可用" if prompt_ok else "视频提示词为空"
+        prompt_warning = bool(getattr(preview, "warnings", None))
+        if prompt_ok and prompt_warning:
+            prompt_message = "视频提示词可用，但存在非阻塞提示：" + "；".join(preview.warnings)
+            prompt_status = "warning"
+        else:
+            prompt_message = "视频提示词可用" if prompt_ok else "视频提示词为空"
+            prompt_status = "ok" if prompt_ok else "error"
     except Exception as exc:  # noqa: BLE001
         prompt_ok = False
         prompt_message = f"视频提示词渲染失败：{exc}"
+        prompt_status = "error"
 
     active_video_task = await _has_active_video_task(db, shot_id=shot_id)
     model_check, provider_check = await _video_model_and_provider_ready(db)
     checks = [
         _check("extraction_ready", extraction_ok, extraction_msg),
         duration_check,
-        _check("prompt_ready", prompt_ok, prompt_message),
+        _check("prompt_ready", prompt_ok, prompt_message, status=prompt_status),
         await _reference_frames_ready(db, shot_id=shot_id, reference_mode=reference_mode),
         model_check,
         provider_check,
@@ -200,6 +220,6 @@ async def get_shot_video_readiness(
     return ShotVideoReadinessRead(
         shot_id=shot_id,
         reference_mode=reference_mode,
-        ready=all(item.ok for item in checks),
+        ready=all(item.status != "error" for item in checks),
         checks=checks,
     )

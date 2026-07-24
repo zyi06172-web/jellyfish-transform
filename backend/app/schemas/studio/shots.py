@@ -502,6 +502,7 @@ class ShotVideoReadinessCheck(BaseModel):
 
     key: str = Field(..., description="检查项 key")
     ok: bool = Field(..., description="是否通过")
+    status: Literal["ok", "warning", "error"] = Field("ok", description="三态诊断：ok/warning/error")
     message: str = Field(..., description="面向前端展示的说明")
 
 

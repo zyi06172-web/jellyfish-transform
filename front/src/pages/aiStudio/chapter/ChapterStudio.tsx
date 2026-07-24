@@ -100,7 +100,7 @@ import type {
   ShotVideoPromptPackRead,
 } from '../../../services/generated'
 import { listTaskLinksNormalized } from '../../../services/filmTaskLinks'
-import { buildFileDownloadUrl, resolveAssetUrl } from '../assets/utils'
+import { buildFileDownloadUrl, resolveAssetUrl } from '../asset-library/utils'
 import type { Chapter } from '../../../mocks/data'
 import { executeTaskCancel } from '../components/taskActionHelpers'
 import { useRelationTaskNotification } from '../components/taskNotificationHelpers'
@@ -238,6 +238,17 @@ function buildActionBeatPhaseTags(summary: string): Array<{ text: string; phaseL
 
 type InspectorMode = 'push' | 'overlay'
 type ShotFilter = 'all' | 'pendingConfirm' | 'generating' | 'ready' | 'hidden' | 'problem'
+type ReadinessCheckStatus = 'ok' | 'warning' | 'error'
+
+function getReadinessCheckStatus(check: { ok: boolean; status?: ReadinessCheckStatus }): ReadinessCheckStatus {
+  return check.status ?? (check.ok ? 'ok' : 'error')
+}
+
+function readinessCheckTagMeta(status: ReadinessCheckStatus) {
+  if (status === 'ok') return { color: 'green', text: '通过' }
+  if (status === 'warning') return { color: 'gold', text: '提醒' }
+  return { color: 'red', text: '阻塞' }
+}
 
 type StudioShot = ShotRead & {
   hidden?: boolean
@@ -2842,7 +2853,8 @@ const ChapterStudio: React.FC = () => {
                 当前按 <Tag className="!mx-1">text_only</Tag> 参考模式检查这批分镜是否具备视频生成条件。
               </div>
               {batchVideoReadinessItems.map(({ shot, readiness, error }) => {
-                const failedChecks = (readiness?.checks ?? []).filter((item) => !item.ok)
+                const blockingChecks = (readiness?.checks ?? []).filter((item) => getReadinessCheckStatus(item) === 'error')
+                const warningChecks = (readiness?.checks ?? []).filter((item) => getReadinessCheckStatus(item) === 'warning')
                 return (
                   <div key={shot.id} className="rounded-lg border border-solid border-gray-200 bg-white px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -2854,8 +2866,10 @@ const ChapterStudio: React.FC = () => {
                           {error
                             ? error
                             : readiness?.ready
-                              ? '当前镜头已满足视频生成条件。'
-                              : `当前镜头还有 ${failedChecks.length} 项待补齐。`}
+                              ? warningChecks.length > 0
+                                ? `当前镜头可生成，但有 ${warningChecks.length} 项提醒。`
+                                : '当前镜头已满足视频生成条件。'
+                              : `当前镜头还有 ${blockingChecks.length} 项阻塞。`}
                         </div>
                       </div>
                       <Tag color={error ? 'red' : readiness?.ready ? 'green' : 'gold'}>
@@ -2864,22 +2878,28 @@ const ChapterStudio: React.FC = () => {
                     </div>
                     {!error ? (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {(readiness?.checks ?? []).map((check) => (
-                          <Tooltip key={check.key} title={check.message}>
-                            <Tag color={check.ok ? 'green' : 'default'}>
-                              {check.ok ? '通过' : '未通过'} · {check.key}
-                            </Tag>
-                          </Tooltip>
-                        ))}
+                        {(readiness?.checks ?? []).map((check) => {
+                          const meta = readinessCheckTagMeta(getReadinessCheckStatus(check))
+                          return (
+                            <Tooltip key={check.key} title={check.message}>
+                              <Tag color={meta.color}>
+                                {meta.text} · {check.key}
+                              </Tag>
+                            </Tooltip>
+                          )
+                        })}
                       </div>
                     ) : null}
-                    {!error && failedChecks.length > 0 ? (
+                    {!error && (blockingChecks.length > 0 || warningChecks.length > 0) ? (
                       <div className="mt-3 space-y-1">
-                        {failedChecks.map((check) => (
-                          <div key={check.key} className="text-xs text-gray-600">
-                            • {check.message}
-                          </div>
-                        ))}
+                        {[...blockingChecks, ...warningChecks].map((check) => {
+                          const status = getReadinessCheckStatus(check)
+                          return (
+                            <div key={check.key} className={status === 'warning' ? 'text-xs text-amber-700' : 'text-xs text-red-600'}>
+                              • {check.message}
+                            </div>
+                          )
+                        })}
                       </div>
                     ) : null}
                   </div>
@@ -4130,7 +4150,7 @@ function Inspector(props: {
       return
     }
     const tab = kind === 'scene' ? 'scene' : kind === 'props' ? 'prop' : 'costume'
-    open(`/assets?tab=${tab}&create=1&name=${encodeURIComponent(name)}${ctxQ}`)
+    open(`/asset-library?tab=${tab}&create=1&name=${encodeURIComponent(name)}${ctxQ}`)
   }, [currentChapterId, projectId, projectStyle, projectVisualStyle, selectedShot?.id])
 
   const handleReadinessMissingAction = useCallback(async (kind: 'characters' | 'scene' | 'props' | 'costumes', name: string) => {
