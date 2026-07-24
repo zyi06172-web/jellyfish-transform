@@ -29,7 +29,7 @@ const MainLayout: React.FC = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
       <aside className="relative z-20 flex w-[104px] shrink-0 flex-col items-center border-r border-black/5 bg-white/72 px-3 py-6 shadow-[18px_0_60px_rgba(0,0,0,.05)] backdrop-blur-2xl">
-        <Link to="/projects" className="mb-9 flex flex-col items-center gap-2">
+        <Link to="/projects" className="mb-9 flex flex-col items-center gap-2 no-underline hover:no-underline">
           <img src="/logo.svg" alt="短剧工厂" className="h-12 w-12 rounded-[18px]" />
           <span className="text-[11px] font-semibold tracking-normal text-black/50">短剧工厂</span>
         </Link>
@@ -41,7 +41,7 @@ const MainLayout: React.FC = () => {
               <Link
                 key={item.key}
                 to={item.href}
-                className={`group flex w-full flex-col items-center gap-2 rounded-[24px] px-2 py-3 text-center transition ${
+                className={`group flex w-full flex-col items-center gap-2 rounded-[24px] px-2 py-3 text-center no-underline transition hover:no-underline ${
                   active ? 'bg-black text-white shadow-xl shadow-black/10' : 'text-black/42 hover:bg-black/[.045] hover:text-black/72'
                 }`}
               >

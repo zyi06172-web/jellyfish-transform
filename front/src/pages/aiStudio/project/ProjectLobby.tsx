@@ -26,26 +26,30 @@ const skillCards: Array<{
   title: string
   subtitle: string
   accent: string
+  icon: string
   hot?: boolean
 }> = [
   {
     key: 'long_video',
     title: '长视频制作',
     subtitle: '适合完整叙事、系列节目和品牌纪录片',
-    accent: 'from-[#a7f3d0] via-[#bfdbfe] to-[#f5f5f7]',
+    accent: 'linear-gradient(135deg, rgba(33,150,243,.16), rgba(76,217,100,.10))',
+    icon: '🎬',
   },
   {
     key: 'commercial',
     title: '商业广告制作',
     subtitle: '围绕产品卖点生成脚本、镜头和投放素材',
-    accent: 'from-[#fed7aa] via-[#dbeafe] to-[#f5f5f7]',
+    accent: 'linear-gradient(135deg, rgba(255,149,0,.24), rgba(0,122,255,.12))',
+    icon: '🧴',
     hot: true,
   },
   {
     key: 'short_drama',
     title: '短剧制作',
     subtitle: '爽点、反转、付费卡点和竖屏分镜',
-    accent: 'from-[#ddd6fe] via-[#bfdbfe] to-[#ccfbf1]',
+    accent: 'linear-gradient(135deg, rgba(175,82,222,.20), rgba(90,200,250,.13))',
+    icon: '🎭',
     hot: true,
   },
 ]
@@ -169,7 +173,8 @@ const ProjectLobby: React.FC = () => {
   return (
     <div className="h-full overflow-y-auto bg-[#f5f5f7] text-[#1d1d1f]">
       <section className="relative min-h-[62vh] px-8 pb-12 pt-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(0,122,255,.12),transparent_28%),radial-gradient(circle_at_82%_4%,rgba(52,199,89,.13),transparent_32%),linear-gradient(180deg,#ffffff,#f5f5f7_72%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(255,45,85,.16),transparent_28%),radial-gradient(circle_at_39%_-7%,rgba(255,149,0,.14),transparent_24%),radial-gradient(circle_at_62%_-4%,rgba(52,199,89,.16),transparent_25%),radial-gradient(circle_at_86%_3%,rgba(0,122,255,.18),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f7f8fb_68%,#f5f5f7_100%)]" />
+        <div className="pointer-events-none absolute left-1/2 top-8 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_190deg,rgba(255,45,85,.10),rgba(255,149,0,.08),rgba(52,199,89,.09),rgba(90,200,250,.12),rgba(175,82,222,.10),rgba(255,45,85,.10))] blur-3xl" />
         <div className="relative mx-auto flex max-w-[1180px] flex-col items-center">
           <div className="mb-9 flex w-full items-center justify-between gap-4">
             <div>
@@ -234,26 +239,34 @@ const ProjectLobby: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-10 text-center text-base font-semibold text-black/38">选择制作风格</div>
-          <div className="mt-5 grid w-full max-w-[1000px] grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-9 grid w-full max-w-[960px] grid-cols-1 gap-4 md:grid-cols-3">
             {skillCards.map((skill) => (
               <button
                 key={skill.key}
                 type="button"
                 onClick={() => setSelectedSkill(skill.key)}
-                className={`relative flex min-h-[132px] flex-col justify-between rounded-[28px] border p-6 text-left shadow-sm transition ${
+                className={`relative flex h-[82px] items-center gap-4 overflow-visible rounded-[24px] border px-5 text-left transition ${
                   selectedSkill === skill.key
-                    ? 'border-black/10 bg-white shadow-[0_22px_60px_rgba(0,0,0,.10)]'
-                    : 'border-black/5 bg-white/58 hover:bg-white hover:shadow-[0_18px_44px_rgba(0,0,0,.08)]'
+                    ? 'border-black/10 bg-[#1d1d1f] text-white shadow-[0_22px_56px_rgba(0,0,0,.16)]'
+                    : 'border-black/8 bg-white text-[#1d1d1f] shadow-[0_10px_28px_rgba(0,0,0,.055)] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,.09)]'
                 }`}
+                style={{ backgroundImage: selectedSkill === skill.key ? skill.accent : undefined }}
               >
-                <div className={`absolute inset-x-4 top-4 h-12 rounded-2xl bg-gradient-to-r ${skill.accent} opacity-80`} />
-                <div className="relative mt-12">
-                  <div className="text-xl font-semibold text-[#1d1d1f]">{skill.title}</div>
-                  <div className="mt-2 text-sm leading-relaxed text-black/45">{skill.subtitle}</div>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl ${
+                  selectedSkill === skill.key ? 'bg-white/18' : 'bg-black/[.055]'
+                }`}>
+                  {skill.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-lg font-semibold">{skill.title}</div>
+                  <div className={`truncate text-sm ${selectedSkill === skill.key ? 'text-white/62' : 'text-black/40'}`}>
+                    {skill.subtitle}
+                  </div>
                 </div>
                 {skill.hot ? (
-                  <span className="absolute right-5 top-5 rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
+                  <span className={`absolute -top-3 right-5 rounded-full px-3 py-1 text-xs font-bold ${
+                    selectedSkill === skill.key ? 'bg-white text-[#1d1d1f]' : 'bg-[#1d1d1f] text-white'
+                  }`}>
                     推荐
                   </span>
                 ) : null}

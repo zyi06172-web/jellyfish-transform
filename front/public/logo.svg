@@ -1,23 +1,37 @@
 <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="g" x1="35" y1="35" x2="165" y2="165" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F5F5F7"/>
-      <stop offset="0.48" stop-color="#9CCBFF"/>
-      <stop offset="1" stop-color="#7CFFCB"/>
+    <linearGradient id="bg" x1="26" y1="28" x2="174" y2="172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B0D12"/>
+      <stop offset="1" stop-color="#171B26"/>
     </linearGradient>
-    <linearGradient id="p" x1="69" y1="58" x2="143" y2="143" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#B8FFE6"/>
+    <linearGradient id="rainbow" x1="40" y1="48" x2="158" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF375F"/>
+      <stop offset="0.28" stop-color="#FF9F0A"/>
+      <stop offset="0.52" stop-color="#32D74B"/>
+      <stop offset="0.74" stop-color="#64D2FF"/>
+      <stop offset="1" stop-color="#BF5AF2"/>
     </linearGradient>
-    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.32"/>
+    <filter id="glow" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
-  <rect x="24" y="24" width="152" height="152" rx="42" fill="#0B0D12"/>
-  <rect x="30" y="30" width="140" height="140" rx="36" stroke="url(#g)" stroke-opacity="0.7" stroke-width="2"/>
-  <g filter="url(#shadow)">
-    <path d="M63 58C63 54.2 67.1 51.8 70.4 53.7L139.4 93.2C142.7 95.1 142.7 99.9 139.4 101.8L70.4 141.3C67.1 143.2 63 140.8 63 137V58Z" fill="url(#p)"/>
-    <path d="M77 75.5C77 73 79.8 71.4 81.9 72.7L119.5 95.2C121.6 96.5 121.6 99.5 119.5 100.8L81.9 123.3C79.8 124.6 77 123 77 120.5V75.5Z" fill="#0B0D12" fill-opacity="0.86"/>
+  <rect x="22" y="22" width="156" height="156" rx="40" fill="url(#bg)"/>
+  <rect x="29" y="29" width="142" height="142" rx="34" stroke="white" stroke-opacity=".10" stroke-width="2"/>
+
+  <g filter="url(#glow)">
+    <path d="M49 62C49 54.3 55.3 48 63 48H137C144.7 48 151 54.3 151 62V75H49V62Z" fill="url(#rainbow)"/>
+    <path d="M61 48L48 75" stroke="#0B0D12" stroke-width="8" stroke-linecap="round"/>
+    <path d="M92 48L79 75" stroke="#0B0D12" stroke-width="8" stroke-linecap="round"/>
+    <path d="M123 48L110 75" stroke="#0B0D12" stroke-width="8" stroke-linecap="round"/>
   </g>
-  <circle cx="146" cy="55" r="8" fill="#7CFFCB"/>
+
+  <rect x="49" y="75" width="102" height="80" rx="18" fill="#F5F5F7"/>
+  <circle cx="100" cy="115" r="26" fill="#0B0D12"/>
+  <circle cx="100" cy="115" r="21" stroke="url(#rainbow)" stroke-width="4" stroke-dasharray="18 8"/>
+  <path d="M94 101.8C94 98.9 97.2 97.1 99.7 98.6L119.3 110.8C121.7 112.3 121.7 115.8 119.3 117.3L99.7 129.4C97.2 131 94 129.2 94 126.3V101.8Z" fill="#F5F5F7"/>
+  <path d="M65 144H135" stroke="#0B0D12" stroke-opacity=".16" stroke-width="5" stroke-linecap="round"/>
 </svg>

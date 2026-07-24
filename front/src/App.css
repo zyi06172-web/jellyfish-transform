@@ -42,18 +42,6 @@
   border-color: #40a9ff;
 }
 
-/* Project workbench: tab 选中态主色下划线 */
-.project-workbench-tabs.ant-tabs .ant-tabs-ink-bar {
-  background: #6366f1;
-  height: 3px;
-}
-.project-workbench-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #6366f1;
-  font-weight: 600;
-}
-.project-workbench-tabs.ant-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
-  color: #6366f1;
-}
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
