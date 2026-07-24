@@ -27,7 +27,7 @@ export function ScenesTab() {
         await StudioEntitiesApi.remove('scene', id)
       }}
       onEditAsset={(asset) => {
-        navigate(`/assets/scenes/${asset.id}/edit`)
+        navigate(`/asset-library/scenes/${asset.id}/edit`)
       }}
     />
   )

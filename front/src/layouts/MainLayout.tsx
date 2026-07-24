@@ -32,7 +32,7 @@ const MainLayout: React.FC = () => {
 
   const selectedKeys = useMemo(() => {
     if (location.pathname === '/projects' || location.pathname.startsWith('/projects/')) return ['projects']
-    if (location.pathname.startsWith('/assets')) return ['assets']
+    if (location.pathname.startsWith('/asset-library')) return ['assets']
     if (location.pathname.startsWith('/prompts')) return ['prompts']
     if (location.pathname.startsWith('/files')) return ['files']
     if (location.pathname.startsWith('/agents')) return ['agents']
@@ -46,12 +46,13 @@ const MainLayout: React.FC = () => {
     if (path.length === 0) return [{ title: t('title') }]
     const items: { title: React.ReactNode; key: string }[] = []
     const pathLabels: Record<string, string> = {
-      projects: '项目列表',
-      assets: '资产管理',
-      prompts: '提示词模板',
+      projects: '短剧项目',
+      assets: '资产库',
+      'asset-library': '资产库',
+      prompts: '提示词库',
       files: '文件管理',
-      agents: 'Agent管理',
-      models: '模型管理',
+      agents: 'Agent编排',
+      models: '模型中心',
       settings: t('menu.settings'),
       chapters: '章节管理',
       studio: '分镜工作室',
@@ -103,22 +104,22 @@ const MainLayout: React.FC = () => {
     {
       key: 'projects',
       icon: <FolderOutlined />,
-      label: <Link to="/projects">项目列表</Link>,
+      label: <Link to="/projects">短剧项目</Link>,
     },
     {
       key: 'assets',
       icon: <PictureOutlined />,
-      label: <Link to="/assets">资产管理</Link>,
+      label: <Link to="/asset-library">资产库</Link>,
     },
     {
       key: 'prompts',
       icon: <FileTextOutlined />,
-      label: <Link to="/prompts">提示词模板</Link>,
+      label: <Link to="/prompts">提示词库</Link>,
     },
     {
       key: 'models',
       icon: <ApiOutlined />,
-      label: <Link to="/models">模型管理</Link>,
+      label: <Link to="/models">模型中心</Link>,
     },
     {
       key: 'settings',
@@ -168,7 +169,7 @@ const MainLayout: React.FC = () => {
       >
         <div className="flex items-center h-16 px-4 border-b border-solid" style={{ borderColor: token.colorBorderSecondary }}>
           <Link to="/projects" className="flex items-center gap-2 min-w-0">
-            <img src="/logo.svg" alt="Jellyfish" className="w-8 h-8 shrink-0" />
+            <img src="/logo.svg" alt="短剧工厂" className="w-8 h-8 shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
                 <div className="text-base font-semibold text-gray-900 truncate">

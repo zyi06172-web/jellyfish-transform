@@ -579,10 +579,15 @@ export function ChaptersTab() {
         loading={loading}
         columns={columns}
         dataSource={chapters}
+        onRow={(record) => ({
+          onClick: () => {
+            if (projectId) navigate(getChapterShotsPath(projectId, record.id))
+          },
+          style: { cursor: 'pointer' },
+        })}
         pagination={{ pageSize: 10 }}
         size="small"
       />
-
       <ChapterRawTextEditorModal
         open={editOpen}
         onClose={() => {

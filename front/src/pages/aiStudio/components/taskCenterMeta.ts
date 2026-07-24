@@ -19,10 +19,10 @@ const CHAPTER_RELATION_TYPES = new Set([
 ])
 
 const ASSET_EDIT_PATH_BUILDERS: Record<string, (id: string) => string> = {
-  actor_image: (id) => `/assets/actors/${id}/edit`,
-  scene_image: (id) => `/assets/scenes/${id}/edit`,
-  prop_image: (id) => `/assets/props/${id}/edit`,
-  costume_image: (id) => `/assets/costumes/${id}/edit`,
+  actor_image: (id) => `/asset-library/actors/${id}/edit`,
+  scene_image: (id) => `/asset-library/scenes/${id}/edit`,
+  prop_image: (id) => `/asset-library/props/${id}/edit`,
+  costume_image: (id) => `/asset-library/costumes/${id}/edit`,
 }
 
 const ASSET_ENTITY_TYPES: Record<string, 'actor' | 'scene' | 'prop' | 'costume'> = {
@@ -112,12 +112,12 @@ async function resolveTaskMeta(task: TaskUiItem): Promise<ResolvedTaskMeta | nul
             ? `/projects/${projectId}/roles/${relationEntityId}/edit`
             : null
           : entityType === 'actor'
-            ? `/assets/actors/${relationEntityId}/edit`
+            ? `/asset-library/actors/${relationEntityId}/edit`
             : entityType === 'scene'
-              ? `/assets/scenes/${relationEntityId}/edit`
+              ? `/asset-library/scenes/${relationEntityId}/edit`
               : entityType === 'prop'
-                ? `/assets/props/${relationEntityId}/edit`
-                : `/assets/costumes/${relationEntityId}/edit`
+                ? `/asset-library/props/${relationEntityId}/edit`
+                : `/asset-library/costumes/${relationEntityId}/edit`
       return {
         sourceLabel: name ? `${labelPrefix}：${name}` : `${labelPrefix}：${relationEntityId}`,
         navigateTo,
@@ -127,12 +127,12 @@ async function resolveTaskMeta(task: TaskUiItem): Promise<ResolvedTaskMeta | nul
         entityType === 'character'
           ? null
           : entityType === 'actor'
-            ? `/assets/actors/${relationEntityId}/edit`
+            ? `/asset-library/actors/${relationEntityId}/edit`
             : entityType === 'scene'
-              ? `/assets/scenes/${relationEntityId}/edit`
+              ? `/asset-library/scenes/${relationEntityId}/edit`
               : entityType === 'prop'
-                ? `/assets/props/${relationEntityId}/edit`
-                : `/assets/costumes/${relationEntityId}/edit`
+                ? `/asset-library/props/${relationEntityId}/edit`
+                : `/asset-library/costumes/${relationEntityId}/edit`
       return {
         sourceLabel: `${relationType}：${relationEntityId}`,
         navigateTo,

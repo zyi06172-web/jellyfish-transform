@@ -6,9 +6,9 @@ import { StudioShotLinksService } from '../../../../../services/generated'
 import type { ProjectActorLinkRead } from '../../../../../services/generated'
 import { StudioEntitiesApi } from '../../../../../services/studioEntities'
 import { useProjectCharacters } from '../hooks/useProjectData'
-import { resolveAssetUrl } from '../../../assets/utils'
-import { DisplayImageCard } from '../../../assets/components/DisplayImageCard'
-import { ActorEntityFormModal } from '../../../assets/components/ActorEntityFormModal'
+import { resolveAssetUrl } from '../../../asset-library/utils'
+import { DisplayImageCard } from '../../../asset-library/components/DisplayImageCard'
+import { ActorEntityFormModal } from '../../../asset-library/components/ActorEntityFormModal'
 import { encodeWorkbenchAssetEditReturnTo } from '../utils/workbenchAssetReturnTo'
 
 type ActorLike = {
@@ -200,7 +200,7 @@ export function ActorsTab() {
             >
               从资产库关联
             </Button>
-            <Button icon={<PlusOutlined />} onClick={() => navigate('/assets')}>
+            <Button icon={<PlusOutlined />} onClick={() => navigate('/asset-library')}>
               前往资产管理
             </Button>
           </Space>
@@ -222,7 +222,7 @@ export function ActorsTab() {
               >
                 从资产库关联
               </Button>
-              <Button onClick={() => navigate('/assets')}>前往资产管理</Button>
+              <Button onClick={() => navigate('/asset-library')}>前往资产管理</Button>
             </Space>
           </Empty>
         ) : (
@@ -244,7 +244,7 @@ export function ActorsTab() {
                         icon={<EditOutlined />}
                         onClick={() =>
                           navigate(
-                            `/assets/actors/${l.actor_id}/edit?returnTo=${encodeWorkbenchAssetEditReturnTo(projectId, 'actors')}`,
+                            `/asset-library/actors/${l.actor_id}/edit?returnTo=${encodeWorkbenchAssetEditReturnTo(projectId, 'actors')}`,
                           )
                         }
                       >

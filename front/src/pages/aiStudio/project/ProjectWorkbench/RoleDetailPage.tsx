@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { AssetEditPageBase } from '../../assets/components/AssetEditPageBase'
-import { assetAdapters } from '../../assets/assetAdapters'
+import { AssetEditPageBase } from '../../asset-library/components/AssetEditPageBase'
+import { assetAdapters } from '../../asset-library/assetAdapters'
 
 export default function RoleDetailPage() {
   const navigate = useNavigate()

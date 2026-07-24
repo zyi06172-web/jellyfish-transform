@@ -25,7 +25,7 @@ import {
 import { executeAsyncTaskCreate, executeTaskCancel, notifyExistingTask } from '../components/taskActionHelpers'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { getChapterShotEditPath, getChapterShotsPath, getChapterStudioPath } from '../project/ProjectWorkbench/routes'
-import { DisplayImageCard } from '../assets/components/DisplayImageCard'
+import { DisplayImageCard } from '../asset-library/components/DisplayImageCard'
 import { ChapterShotAssetConfirmation } from './components/ChapterShotAssetConfirmation'
 import { ChapterShotBasicInfoSection } from './components/ChapterShotBasicInfoSection'
 import { ChapterShotDialogueConfirmation } from './components/ChapterShotDialogueConfirmation'
@@ -39,8 +39,8 @@ import {
   useCancelableRelationTask,
 } from '../project/ProjectWorkbench/chapterDivisionTasks'
 import { StudioEntitiesApi } from '../../../services/studioEntities'
+import { resolveAssetUrl } from '../asset-library/utils'
 import { autoConfirmShotCandidates } from '../../../services/candidateAutoConfirm'
-import { resolveAssetUrl } from '../assets/utils'
 
 const { Header, Content } = Layout
 const extractTaskCopy = TASK_COPY.scriptExtract
@@ -1076,7 +1076,7 @@ export function ChapterShotEditPage() {
                 styleQ
               if (asset.kind === 'scene' || asset.kind === 'prop' || asset.kind === 'costume') {
                 open(
-                  `/assets?tab=${asset.kind}&create=1&name=${encodeURIComponent(name)}${descQ}${ctxQ}`,
+                  `/asset-library?tab=${asset.kind}&create=1&name=${encodeURIComponent(name)}${descQ}${ctxQ}`,
                 )
                 return
               }

@@ -67,7 +67,7 @@ export const assetAdapters = {
   actor: {
     missingAssetIdText: '缺少 actor_id',
     assetDisplayName: '演员',
-    backTo: '/assets?tab=actor',
+    backTo: '/asset-library?tab=actor',
     relationType: 'actor_image',
     getAsset: async (id: string) => {
       const res = await StudioEntitiesApi.get('actor', id)
@@ -109,7 +109,7 @@ export const assetAdapters = {
   scene: {
     missingAssetIdText: '缺少 scene_id',
     assetDisplayName: '场景',
-    backTo: '/assets?tab=scene',
+    backTo: '/asset-library?tab=scene',
     relationType: 'scene_image',
     getAsset: async (id: string) => {
       const res = await StudioEntitiesApi.get('scene', id)
@@ -153,7 +153,7 @@ export const assetAdapters = {
   prop: {
     missingAssetIdText: '缺少 prop_id',
     assetDisplayName: '道具',
-    backTo: '/assets?tab=prop',
+    backTo: '/asset-library?tab=prop',
     relationType: 'prop_image',
     getAsset: async (id: string) => {
       const res = await StudioEntitiesApi.get('prop', id)
@@ -197,7 +197,7 @@ export const assetAdapters = {
   costume: {
     missingAssetIdText: '缺少 costume_id',
     assetDisplayName: '服装',
-    backTo: '/assets?tab=costume',
+    backTo: '/asset-library?tab=costume',
     relationType: 'costume_image',
     getAsset: async (id: string) => {
       const res = await StudioEntitiesApi.get('costume', id)

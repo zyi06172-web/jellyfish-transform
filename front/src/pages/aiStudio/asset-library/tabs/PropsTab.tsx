@@ -27,7 +27,7 @@ export function PropsTab() {
         await StudioEntitiesApi.remove('prop', id)
       }}
       onEditAsset={(asset) => {
-        navigate(`/assets/props/${asset.id}/edit`)
+        navigate(`/asset-library/props/${asset.id}/edit`)
       }}
     />
   )

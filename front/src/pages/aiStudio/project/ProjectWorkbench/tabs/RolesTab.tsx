@@ -8,8 +8,8 @@ import {
 } from '../../../../../services/generated'
 import type { ProjectActorLinkRead, ProjectCostumeLinkRead } from '../../../../../services/generated'
 import { useProjectCharacters, newId } from '../hooks/useProjectData'
-import { resolveAssetUrl } from '../../../assets/utils'
-import { DisplayImageCard } from '../../../assets/components/DisplayImageCard'
+import { resolveAssetUrl } from '../../../asset-library/utils'
+import { DisplayImageCard } from '../../../asset-library/components/DisplayImageCard'
 import { StudioEntitiesApi } from '../../../../../services/studioEntities'
 import {
   ProjectVisualStyleAndStyleFields,

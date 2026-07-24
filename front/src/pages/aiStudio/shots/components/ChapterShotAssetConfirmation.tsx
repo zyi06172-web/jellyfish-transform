@@ -1,6 +1,6 @@
 import { Button, Tag, Tooltip } from 'antd'
-import { DisplayImageCard } from '../../assets/components/DisplayImageCard'
-import { resolveAssetUrl } from '../../assets/utils'
+import { DisplayImageCard } from '../../asset-library/components/DisplayImageCard'
+import { resolveAssetUrl } from '../../asset-library/utils'
 import type {
   EntityNameExistenceItem,
   ShotAssetOverviewItem,
@@ -35,9 +35,9 @@ type ChapterShotAssetConfirmationProps = {
 }
 
 function assetDetailUrl(kind: AssetKind, id: string, projectId: string) {
-  if (kind === 'scene') return `/assets/scenes/${encodeURIComponent(id)}/edit`
-  if (kind === 'prop') return `/assets/props/${encodeURIComponent(id)}/edit`
-  if (kind === 'costume') return `/assets/costumes/${encodeURIComponent(id)}/edit`
+  if (kind === 'scene') return `/asset-library/scenes/${encodeURIComponent(id)}/edit`
+  if (kind === 'prop') return `/asset-library/props/${encodeURIComponent(id)}/edit`
+  if (kind === 'costume') return `/asset-library/costumes/${encodeURIComponent(id)}/edit`
   return `/projects/${encodeURIComponent(projectId)}/roles/${encodeURIComponent(id)}/edit`
 }
 

@@ -162,7 +162,7 @@ const ProjectWorkbench: React.FC = () => {
   const moreMenuItems: MenuProps['items'] = [
     { key: 'newActor', label: '关联演员', onClick: () => setTabInUrl('actors') },
     { key: 'newRole', label: '新建角色', onClick: () => setTabInUrl('roles') },
-    { key: 'upload', label: '上传素材', onClick: () => navigate('/assets') },
+    { key: 'upload', label: '上传素材', onClick: () => navigate('/asset-library') },
     { key: 'newScene', label: '新建场景', onClick: () => setTabInUrl('scenes') },
     { key: 'newProp', label: '新建道具', onClick: () => setTabInUrl('props') },
     { key: 'newCostume', label: '新建服装', onClick: () => setTabInUrl('costumes') },

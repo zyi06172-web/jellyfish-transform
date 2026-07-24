@@ -4,9 +4,9 @@ import { DownloadOutlined, FileImageOutlined, VideoCameraOutlined } from '@ant-d
 import { useNavigate, useParams } from 'react-router-dom'
 import { StudioFilesService, StudioShotsService } from '../../../../../services/generated'
 import type { FileRead } from '../../../../../services/generated'
-import { DisplayImageCard } from '../../../assets/components/DisplayImageCard'
+import { DisplayImageCard } from '../../../asset-library/components/DisplayImageCard'
 import { useChapters } from '../hooks/useProjectData'
-import { buildFileDownloadUrl } from '../../../assets/utils'
+import { buildFileDownloadUrl } from '../../../asset-library/utils'
 
 const PAGE_SIZE = 10
 

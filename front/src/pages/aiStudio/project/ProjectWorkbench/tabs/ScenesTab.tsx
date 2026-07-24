@@ -4,10 +4,10 @@ import { EditOutlined, LinkOutlined, PlusOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import { StudioShotLinksService } from '../../../../../services/generated'
 import type { ProjectSceneLinkRead } from '../../../../../services/generated'
-import { buildFileDownloadUrl, resolveAssetUrl } from '../../../assets/utils'
-import { DisplayImageCard } from '../../../assets/components/DisplayImageCard'
+import { buildFileDownloadUrl, resolveAssetUrl } from '../../../asset-library/utils'
+import { DisplayImageCard } from '../../../asset-library/components/DisplayImageCard'
 import { StudioEntitiesApi } from '../../../../../services/studioEntities'
-import { StudioAssetTypeFormModal } from '../../../assets/components/StudioAssetTypeFormModal'
+import { StudioAssetTypeFormModal } from '../../../asset-library/components/StudioAssetTypeFormModal'
 import { encodeWorkbenchAssetEditReturnTo } from '../utils/workbenchAssetReturnTo'
 
 type SceneLike = {
@@ -176,7 +176,7 @@ export function ScenesTab() {
             >
               从资产库关联
             </Button>
-            <Button icon={<PlusOutlined />} onClick={() => navigate('/assets?tab=scene')}>
+            <Button icon={<PlusOutlined />} onClick={() => navigate('/asset-library?tab=scene')}>
               前往资产管理
             </Button>
           </Space>
@@ -203,7 +203,7 @@ export function ScenesTab() {
                         icon={<EditOutlined />}
                         onClick={() =>
                           navigate(
-                            `/assets/scenes/${l.scene_id}/edit?returnTo=${encodeWorkbenchAssetEditReturnTo(projectId, 'scenes')}`,
+                            `/asset-library/scenes/${l.scene_id}/edit?returnTo=${encodeWorkbenchAssetEditReturnTo(projectId, 'scenes')}`,
                           )
                         }
                       >

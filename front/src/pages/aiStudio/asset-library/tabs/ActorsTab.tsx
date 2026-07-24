@@ -143,7 +143,7 @@ export function ActorsTab() {
                   <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(a)}>
                     编辑
                   </Button>
-                  <Button size="small" onClick={() => navigate(`/assets/actors/${a.id}/edit`)}>
+                  <Button size="small" onClick={() => navigate(`/asset-library/actors/${a.id}/edit`)}>
                     详情
                   </Button>
                   <Button

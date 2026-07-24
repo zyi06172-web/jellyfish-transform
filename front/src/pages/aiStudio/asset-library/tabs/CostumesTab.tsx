@@ -27,7 +27,7 @@ export function CostumesTab() {
         await StudioEntitiesApi.remove('costume', id)
       }}
       onEditAsset={(asset) => {
-        navigate(`/assets/costumes/${asset.id}/edit`)
+        navigate(`/asset-library/costumes/${asset.id}/edit`)
       }}
     />
   )

@@ -4,10 +4,10 @@ import { EditOutlined, LinkOutlined, PlusOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import { StudioShotLinksService } from '../../../../../services/generated'
 import type { ProjectCostumeLinkRead, ProjectPropLinkRead } from '../../../../../services/generated'
-import { resolveAssetUrl } from '../../../assets/utils'
-import { DisplayImageCard } from '../../../assets/components/DisplayImageCard'
+import { resolveAssetUrl } from '../../../asset-library/utils'
+import { DisplayImageCard } from '../../../asset-library/components/DisplayImageCard'
 import { StudioEntitiesApi } from '../../../../../services/studioEntities'
-import { StudioAssetTypeFormModal } from '../../../assets/components/StudioAssetTypeFormModal'
+import { StudioAssetTypeFormModal } from '../../../asset-library/components/StudioAssetTypeFormModal'
 import { encodeWorkbenchAssetEditReturnTo, type WorkbenchAssetTabParam } from '../utils/workbenchAssetReturnTo'
 
 type AssetKind = 'prop' | 'costume'
@@ -198,7 +198,7 @@ function LinkedAssetTab({
             >
               从资产库关联
             </Button>
-            <Button icon={<PlusOutlined />} onClick={() => navigate(`/assets?tab=${kind}`)}>
+            <Button icon={<PlusOutlined />} onClick={() => navigate(`/asset-library?tab=${kind}`)}>
               前往资产管理
             </Button>
           </Space>
@@ -228,8 +228,8 @@ function LinkedAssetTab({
                         onClick={() => {
                           const path =
                             kind === 'prop'
-                              ? `/assets/props/${assetId}/edit`
-                              : `/assets/costumes/${assetId}/edit`
+                              ? `/asset-library/props/${assetId}/edit`
+                              : `/asset-library/costumes/${assetId}/edit`
                           navigate(`${path}?returnTo=${encodeWorkbenchAssetEditReturnTo(projectId, workbenchTab)}`)
                         }}
                       >
