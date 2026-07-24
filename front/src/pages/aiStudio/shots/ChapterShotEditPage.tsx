@@ -39,6 +39,7 @@ import {
   useCancelableRelationTask,
 } from '../project/ProjectWorkbench/chapterDivisionTasks'
 import { StudioEntitiesApi } from '../../../services/studioEntities'
+import { autoConfirmShotCandidates } from '../../../services/candidateAutoConfirm'
 import { resolveAssetUrl } from '../assets/utils'
 
 const { Header, Content } = Layout
@@ -238,6 +239,7 @@ export function ChapterShotEditPage() {
   const [dialogAddingKeys, setDialogAddingKeys] = useState<Record<string, boolean>>({})
   const [batchDialogAdding, setBatchDialogAdding] = useState(false)
   const [candidateActionIds, setCandidateActionIds] = useState<Record<number, boolean>>({})
+  const [autoConfirmLoadingLevel, setAutoConfirmLoadingLevel] = useState<'L1' | 'L2' | null>(null)
   const [editorTabKey, setEditorTabKey] = useState<'basic' | 'confirm'>('basic')
   const [shotListFilter, setShotListFilter] = useState<ShotListFilter>('all')
   const dialogDebounceTimersRef = useRef<Map<number, number>>(new Map())
@@ -1127,6 +1129,27 @@ export function ChapterShotEditPage() {
     [applyPreparationState, candidateActionIds, loadPreparationState],
   )
 
+  const handleAutoConfirmCandidates = useCallback(
+    async (level: 'L1' | 'L2') => {
+      if (!shotId) return
+      setAutoConfirmLoadingLevel(level)
+      try {
+        const result = await autoConfirmShotCandidates(shotId, level)
+        if (result.state) {
+          applyPreparationState(result.state as ShotPreparationStateRead)
+        } else {
+          await loadPreparationState({ silent: true })
+        }
+        message.success(`自动确认完成：关联 ${result.linked_existing}，新建 ${result.created_and_linked}，跳过 ${result.skipped}`)
+      } catch (e) {
+        message.error(e instanceof Error ? e.message : '自动确认失败')
+      } finally {
+        setAutoConfirmLoadingLevel(null)
+      }
+    },
+    [applyPreparationState, loadPreparationState, shotId],
+  )
+
 
   const prefetchExistenceForNewAssets = useCallback(
     async (kind: AssetKind, items: AssetVM[]) => {
@@ -1449,6 +1472,8 @@ export function ChapterShotEditPage() {
             onToggleExpanded={toggleExpanded}
             onIgnoreCandidate={(asset) => void ignoreCandidate(asset)}
             onHandleNewAsset={(asset) => void handleNewAsset(asset)}
+            onAutoConfirm={(level) => void handleAutoConfirmCandidates(level)}
+            autoConfirmLoadingLevel={autoConfirmLoadingLevel}
           />
 
           <Divider className="!my-1" />

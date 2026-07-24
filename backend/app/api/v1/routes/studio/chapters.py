@@ -10,6 +10,10 @@ from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
 from app.models.studio import Chapter, Project, Shot
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, paginated_response, success_response
+from app.schemas.studio.shots import (
+    ChapterCandidateAutoConfirmResultRead,
+    ShotCandidateAutoConfirmRequest,
+)
 from app.services.common import (
     create_and_refresh,
     delete_if_exists,
@@ -22,6 +26,7 @@ from app.services.common import (
     require_entity,
 )
 from app.schemas.studio.projects import ChapterCreate, ChapterRead, ChapterUpdate
+from app.services.studio.candidate_auto_confirm import auto_confirm_chapter_candidates
 
 router = APIRouter()
 
@@ -119,6 +124,20 @@ async def get_chapter(
     res = await db.execute(count_stmt)
     shot_count = int(res.scalar() or 0)
     return success_response(ChapterRead.model_validate(obj).model_copy(update={"shot_count": shot_count}))
+
+
+@router.post(
+    "/{chapter_id}/auto-confirm-candidates",
+    response_model=ApiResponse[ChapterCandidateAutoConfirmResultRead],
+    summary="章节级自动确认资产候选（串行去重，不调用 LLM）",
+)
+async def auto_confirm_chapter_candidates_api(
+    chapter_id: str,
+    body: ShotCandidateAutoConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ChapterCandidateAutoConfirmResultRead]:
+    data = await auto_confirm_chapter_candidates(db, chapter_id=chapter_id, level=body.level)
+    return success_response(data)
 
 
 @router.patch(

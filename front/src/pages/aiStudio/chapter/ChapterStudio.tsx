@@ -74,6 +74,7 @@ import {
   StudioShotsService,
 } from '../../../services/generated'
 import { StudioEntitiesApi } from '../../../services/studioEntities'
+import { autoConfirmChapterCandidates } from '../../../services/candidateAutoConfirm'
 import type {
   CameraAngle,
   CameraMovement,
@@ -530,6 +531,7 @@ const ChapterStudio: React.FC = () => {
   const [prefs, setPrefs] = useLocalStoragePrefs()
   const [generating, setGenerating] = useState(false)
   const [batchSkipExtractionUpdating, setBatchSkipExtractionUpdating] = useState(false)
+  const [batchAutoConfirming, setBatchAutoConfirming] = useState(false)
   const [batchVideoReadinessOpen, setBatchVideoReadinessOpen] = useState(false)
   const [batchVideoReadinessLoading, setBatchVideoReadinessLoading] = useState(false)
   const [batchVideoReadinessItems, setBatchVideoReadinessItems] = useState<
@@ -1122,6 +1124,24 @@ const ChapterStudio: React.FC = () => {
       setBatchVideoReadinessLoading(false)
     }
   }, [fetchBatchVideoReadiness])
+
+  const batchAutoConfirmCandidates = useCallback(async () => {
+    if (!chapterId) return
+    setBatchAutoConfirming(true)
+    try {
+      const result = await autoConfirmChapterCandidates(chapterId, 'L3')
+      await Promise.all([
+        loadShots(),
+        selectedShotId ? loadShotCandidateItems(selectedShotId) : Promise.resolve(),
+        selectedShotId ? loadShotDialogueCandidateItems(selectedShotId) : Promise.resolve(),
+      ])
+      message.success(`L3 自动确认完成：处理 ${result.shot_count} 镜头，关联 ${result.linked_existing}，新建 ${result.created_and_linked}，跳过 ${result.skipped}`)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : 'L3 自动确认失败')
+    } finally {
+      setBatchAutoConfirming(false)
+    }
+  }, [chapterId, loadShotCandidateItems, loadShotDialogueCandidateItems, loadShots, selectedShotId])
 
   const runBatchGenerate = useCallback(
     async (targetShotIds: string[]) => {
@@ -1993,6 +2013,21 @@ const ChapterStudio: React.FC = () => {
       label: '维护：恢复提取',
       disabled: batchSkipExtractionUpdating,
       onClick: () => batchUpdateSkipExtraction(false),
+    },
+    {
+      key: 'auto-confirm-candidates',
+      icon: <CheckCircleOutlined />,
+      label: 'L3 自动确认候选',
+      disabled: batchAutoConfirming,
+      onClick: () =>
+        Modal.confirm({
+          title: '对本章节串行自动确认资产候选？',
+          content: 'L3 会按镜头顺序处理本章节候选：优先复用同名资产，缺失时创建最小资产，并跨镜头去重；不会调用 LLM。',
+          okText: '开始',
+          cancelText: '取消',
+          okButtonProps: { loading: batchAutoConfirming },
+          onOk: () => batchAutoConfirmCandidates(),
+        }),
     },
     { type: 'divider' as const },
     {

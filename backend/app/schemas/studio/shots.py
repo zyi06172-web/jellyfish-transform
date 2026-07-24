@@ -442,6 +442,37 @@ class ShotPreparationMutationResultRead(BaseModel):
     state: ShotPreparationStateRead = Field(..., description="动作完成后的最新准备页聚合状态")
 
 
+class ShotCandidateAutoConfirmRequest(BaseModel):
+    """候选自动确认请求。"""
+
+    level: Literal["L1", "L2", "L3"] = Field("L1", description="自动确认级别：L1/L2/L3")
+
+
+class ShotCandidateAutoConfirmResultRead(BaseModel):
+    """候选自动确认结果。"""
+
+    shot_id: str = Field(..., description="镜头 ID")
+    level: Literal["L1", "L2", "L3"] = Field(..., description="执行级别")
+    linked_existing: int = Field(0, description="关联已有资产数量")
+    created_and_linked: int = Field(0, description="创建并关联资产数量")
+    skipped: int = Field(0, description="跳过候选数量")
+    processed_candidate_ids: list[int] = Field(default_factory=list, description="已处理候选 ID")
+    messages: list[str] = Field(default_factory=list, description="执行说明")
+    state: ShotPreparationStateRead = Field(..., description="执行后的镜头准备状态")
+
+
+class ChapterCandidateAutoConfirmResultRead(BaseModel):
+    """章节级候选自动确认结果。"""
+
+    chapter_id: str = Field(..., description="章节 ID")
+    level: Literal["L1", "L2", "L3"] = Field(..., description="执行级别")
+    shot_count: int = Field(0, description="处理镜头数")
+    linked_existing: int = Field(0, description="关联已有资产数量")
+    created_and_linked: int = Field(0, description="创建并关联资产数量")
+    skipped: int = Field(0, description="跳过候选数量")
+    results: list[ShotCandidateAutoConfirmResultRead] = Field(default_factory=list, description="逐镜头结果")
+
+
 class ShotPromptAssetRef(BaseModel):
     """用于提示词渲染的镜头资产引用。"""
 

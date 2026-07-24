@@ -30,6 +30,8 @@ type ChapterShotAssetConfirmationProps = {
   onToggleExpanded: (kind: AssetKind) => void
   onIgnoreCandidate: (asset: AssetVM) => void
   onHandleNewAsset: (asset: AssetVM) => void
+  onAutoConfirm: (level: 'L1' | 'L2') => void
+  autoConfirmLoadingLevel?: 'L1' | 'L2' | null
 }
 
 function assetDetailUrl(kind: AssetKind, id: string, projectId: string) {
@@ -49,6 +51,8 @@ export function ChapterShotAssetConfirmation({
   onToggleExpanded,
   onIgnoreCandidate,
   onHandleNewAsset,
+  onAutoConfirm,
+  autoConfirmLoadingLevel,
 }: ChapterShotAssetConfirmationProps) {
   const pendingCount = Object.values(unionAssets).reduce(
     (sum, items) => sum + items.filter((item) => item.status === 'new').length,
@@ -230,6 +234,27 @@ export function ChapterShotAssetConfirmation({
           </div>
           <div className="text-[11px] text-slate-500 mt-1">这里处理系统提取出的场景、角色、道具和服装候选。</div>
         </div>
+        {pendingCount > 0 ? (
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Button
+              size="small"
+              loading={autoConfirmLoadingLevel === 'L1'}
+              disabled={!!autoConfirmLoadingLevel}
+              onClick={() => onAutoConfirm('L1')}
+            >
+              L1 关联已有
+            </Button>
+            <Button
+              size="small"
+              type="primary"
+              loading={autoConfirmLoadingLevel === 'L2'}
+              disabled={!!autoConfirmLoadingLevel}
+              onClick={() => onAutoConfirm('L2')}
+            >
+              L2 创建缺失
+            </Button>
+          </div>
+        ) : null}
       </div>
       <div className="space-y-4">
         {renderAssetGrid('scene', '场景', unionAssets.scene)}

@@ -69,6 +69,8 @@ from app.schemas.studio.shots import (
     ProjectAssetLinkCreate,
     ProjectCostumeLinkRead,
     ShotAssetsOverviewRead,
+    ShotCandidateAutoConfirmRequest,
+    ShotCandidateAutoConfirmResultRead,
     ShotLinkedAssetItem,
     ShotCreate,
     ShotDetailCreate,
@@ -97,6 +99,7 @@ from app.schemas.studio.shots import (
     ShotVideoReadinessRead,
     ShotVideoPromptPreviewRead,
 )
+from app.services.studio.candidate_auto_confirm import auto_confirm_shot_candidates
 
 router = APIRouter()
 details_router = APIRouter()
@@ -318,6 +321,20 @@ async def update_shot_skip_extraction(
             state=data,
         )
     )
+
+
+@router.post(
+    "/{shot_id}/auto-confirm-candidates",
+    response_model=ApiResponse[ShotCandidateAutoConfirmResultRead],
+    summary="自动确认镜头资产候选（L1/L2，不调用 LLM）",
+)
+async def auto_confirm_shot_candidates_api(
+    shot_id: str,
+    body: ShotCandidateAutoConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ShotCandidateAutoConfirmResultRead]:
+    data = await auto_confirm_shot_candidates(db, shot_id=shot_id, level=body.level)
+    return success_response(data)
 
 
 @router.patch(
