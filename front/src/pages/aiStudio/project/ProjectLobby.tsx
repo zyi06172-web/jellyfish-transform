@@ -172,7 +172,7 @@ const ProjectLobby: React.FC = () => {
 
   return (
     <div className="relative h-full overflow-y-auto bg-[#f5f5f7] text-[#1d1d1f]">
-      <div className="pointer-events-none fixed inset-y-0 left-[104px] right-0 bg-[radial-gradient(circle_at_16%_0%,rgba(255,45,85,.15),transparent_28%),radial-gradient(circle_at_39%_-7%,rgba(255,149,0,.13),transparent_24%),radial-gradient(circle_at_62%_-4%,rgba(52,199,89,.15),transparent_25%),radial-gradient(circle_at_86%_3%,rgba(0,122,255,.17),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8f9fb_56%,#f5f5f7_100%)]" />
+      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_13%_0%,rgba(255,45,85,.14),transparent_28%),radial-gradient(circle_at_37%_-7%,rgba(255,149,0,.12),transparent_24%),radial-gradient(circle_at_61%_-4%,rgba(52,199,89,.14),transparent_25%),radial-gradient(circle_at_85%_3%,rgba(0,122,255,.16),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8f9fb_56%,#f5f5f7_100%)]" />
       <div className="pointer-events-none fixed left-1/2 top-7 h-[390px] w-[720px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_190deg,rgba(255,45,85,.09),rgba(255,149,0,.075),rgba(52,199,89,.085),rgba(90,200,250,.11),rgba(175,82,222,.085),rgba(255,45,85,.09))] blur-3xl" />
 
       <section className="relative px-8 pb-7 pt-8">
@@ -187,8 +187,9 @@ const ProjectLobby: React.FC = () => {
             </div>
           </div>
 
-          <h1 className="max-w-[900px] text-center text-5xl font-semibold leading-[1.08] tracking-normal text-[#1d1d1f] md:text-[76px]">
-            一段剧情，即刻视频生产线。
+          <h1 className="max-w-[900px] text-center text-5xl font-semibold leading-[1.03] tracking-normal text-[#1d1d1f] md:text-[76px]">
+            <span className="block">一段视频</span>
+            <span className="block">一条视频生产线</span>
           </h1>
           <p className="mt-5 max-w-[660px] text-center text-lg leading-relaxed text-black/43">
             把灵感交给 Agent，它会理解叙事意图，整理角色与镜头，并把每一次创作沉淀成可继续推进的项目。
