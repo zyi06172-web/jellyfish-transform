@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.llm import Model, ModelCategoryKey, ModelSettings, Provider
 from app.services.common import entity_not_found
 from app.services.llm.provider_resolver import resolve_effective_base_url
+from app.services.llm.provider_registry import resolve_provider_key_from_name
 
 
 def _settings_model_id(settings_row: ModelSettings | None, category: ModelCategoryKey) -> str | None:
@@ -177,9 +178,33 @@ def _build_chat_openai_model(
     if base_url:
         kwargs.setdefault("base_url", base_url)
 
-    if not thinking:
-        extra_body = dict(kwargs.get("extra_body") or {})
-        extra_body["enable_thinking"] = False
-        kwargs["extra_body"] = extra_body
+    apply_thinking_params(kwargs, provider=provider, model=model, thinking=thinking)
 
     return ChatOpenAI(**kwargs)
+
+
+def apply_thinking_params(
+    kwargs: dict[str, Any],
+    *,
+    provider: Provider,
+    model: Model,
+    thinking: bool,
+) -> None:
+    """按供应商与模型写入 thinking 参数，兼容火山 Seed 2.0 与 OpenAI-compatible 默认行为。"""
+    extra_body = dict(kwargs.get("extra_body") or {})
+    if _is_volcengine_seed_model(provider=provider, model=model):
+        extra_body["thinking"] = {"type": "enabled" if thinking else "disabled"}
+    elif not thinking:
+        extra_body["enable_thinking"] = False
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
+
+def _is_volcengine_seed_model(*, provider: Provider, model: Model) -> bool:
+    """判断是否为火山方舟 Seed 系列文本模型。"""
+    try:
+        provider_key = resolve_provider_key_from_name(provider.name)
+    except HTTPException:
+        return False
+    normalized_name = (model.name or "").lower()
+    return provider_key == "volcengine" and "seed" in normalized_name

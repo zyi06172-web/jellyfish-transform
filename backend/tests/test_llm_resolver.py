@@ -208,6 +208,44 @@ async def test_build_default_text_llm_supports_thinking_toggle(monkeypatch: pyte
     await engine.dispose()
 
 
+@pytest.mark.asyncio
+async def test_build_default_text_llm_uses_volcengine_seed_thinking_shape(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):  # noqa: ANN003, ANN204
+            self.kwargs = kwargs
+
+    fake_module = types.ModuleType("langchain_openai")
+    fake_module.ChatOpenAI = FakeChatOpenAI
+    monkeypatch.setitem(sys.modules, "langchain_openai", fake_module)
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    session_local = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_local() as db:
+        provider = Provider(id="p1", name="火山引擎", base_url="https://ark.cn-beijing.volces.com/api/v3", api_key="k")
+        model = Model(
+            id="m_text",
+            name="doubao-seed-2-0-lite-260215",
+            category=ModelCategoryKey.text,
+            provider_id="p1",
+        )
+        settings = ModelSettings(id=1, default_text_model_id="m_text")
+        db.add_all([provider, model, settings])
+        await db.commit()
+
+        thinking_llm = await build_default_text_llm(db, thinking=True)
+        nothinking_llm = await build_default_text_llm(db, thinking=False)
+
+        assert thinking_llm.kwargs["extra_body"]["thinking"] == {"type": "enabled"}
+        assert nothinking_llm.kwargs["extra_body"]["thinking"] == {"type": "disabled"}
+        assert "enable_thinking" not in thinking_llm.kwargs["extra_body"]
+        assert "enable_thinking" not in nothinking_llm.kwargs["extra_body"]
+
+    await engine.dispose()
+
+
 def test_resolve_effective_base_url_prefers_category_specific_url() -> None:
     provider = Provider(
         id="p1",
@@ -229,4 +267,3 @@ def test_resolve_effective_base_url_prefers_category_specific_url() -> None:
         resolve_effective_base_url(provider=provider, category=ModelCategoryKey.video)
         == "https://video-gateway.example/v1"
     )
-

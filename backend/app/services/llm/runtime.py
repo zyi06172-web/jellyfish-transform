@@ -9,6 +9,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from sqlalchemy.orm import Session
 
 from app.models.llm import Model, ModelCategoryKey, ModelSettings, Provider
+from app.services.llm.resolver import apply_thinking_params
 from app.services.llm.provider_resolver import resolve_effective_base_url
 
 
@@ -68,9 +69,6 @@ def build_default_text_llm_sync(
     if base_url:
         kwargs.setdefault("base_url", base_url)
 
-    if not thinking:
-        extra_body = dict(kwargs.get("extra_body") or {})
-        extra_body["enable_thinking"] = False
-        kwargs["extra_body"] = extra_body
+    apply_thinking_params(kwargs, provider=provider, model=model, thinking=thinking)
 
     return ChatOpenAI(**kwargs)

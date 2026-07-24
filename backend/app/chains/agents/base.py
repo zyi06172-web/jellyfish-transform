@@ -143,7 +143,6 @@ class AgentBase(ABC, Generic[T]):
         agent_kwargs: dict[str, Any] | None = None,
     ) -> None:
         self._model = model
-        self._model.bind(extra_body={"enable_thinking": self.enable_thinking})
         self._structured_output_method = structured_output_method
         self._agent_kwargs = dict(agent_kwargs or {})
         self._structured_chain: Runnable | None = None
