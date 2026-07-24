@@ -9,104 +9,27 @@ import {
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { StudioProjectsService } from '../../../services/generated'
-import type { ProjectRead, ProjectStyle } from '../../../services/generated'
-
-type SkillMode = 'long_video' | 'commercial' | 'short_drama'
-
-type ProjectCard = {
-  id: string
-  name: string
-  description: string
-  updatedAt: string
-  progress: number
-}
-
-const skillCards: Array<{
-  key: SkillMode
-  title: string
-  subtitle: string
-  accent: string
-  icon: string
-  hot?: boolean
-}> = [
-  {
-    key: 'long_video',
-    title: '长视频制作',
-    subtitle: '适合完整叙事、系列节目和品牌纪录片',
-    accent: 'linear-gradient(135deg, rgba(33,150,243,.16), rgba(76,217,100,.10))',
-    icon: '🎬',
-  },
-  {
-    key: 'commercial',
-    title: '商业广告制作',
-    subtitle: '围绕产品卖点生成脚本、镜头和投放素材',
-    accent: 'linear-gradient(135deg, rgba(255,149,0,.24), rgba(0,122,255,.12))',
-    icon: '🧴',
-    hot: true,
-  },
-  {
-    key: 'short_drama',
-    title: '短剧制作',
-    subtitle: '爽点、反转、付费卡点和竖屏分镜',
-    accent: 'linear-gradient(135deg, rgba(175,82,222,.20), rgba(90,200,250,.13))',
-    icon: '🎭',
-    hot: true,
-  },
-]
-
-/** 生成稳定的本地项目 ID，继续沿用现有项目创建 API。 */
-function newProjectId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID()
-  }
-  return `p_${Date.now()}_${Math.random().toString(16).slice(2)}`
-}
-
-/** 模拟 Agent 对剧情大纲的标题总结，先实现首页输入后自动留档。 */
-function summarizeTitle(prompt: string, mode: SkillMode) {
-  const cleaned = prompt
-    .replace(/\s+/g, ' ')
-    .replace(/[“”"'《》]/g, '')
-    .trim()
-  const firstClause = cleaned.split(/[，。！？,.!?；;]/)[0]?.trim()
-  if (firstClause && firstClause.length >= 4) {
-    return firstClause.length > 18 ? `${firstClause.slice(0, 18)}...` : firstClause
-  }
-  const fallback: Record<SkillMode, string> = {
-    long_video: '未命名长视频项目',
-    commercial: '未命名广告项目',
-    short_drama: '未命名短剧项目',
-  }
-  return fallback[mode]
-}
-
-/** 将后端项目读取结果压成首页最近项目需要的轻量卡片。 */
-function toProjectCard(project: ProjectRead): ProjectCard {
-  const stats = (project.stats ?? {}) as Record<string, unknown>
-  const updatedAt =
-    (typeof stats.updated_at === 'string' && stats.updated_at) ||
-    (typeof stats.updatedAt === 'string' && stats.updatedAt) ||
-    new Date().toLocaleString()
-  return {
-    id: project.id,
-    name: project.name,
-    description: project.description ?? '',
-    updatedAt,
-    progress: project.progress ?? 0,
-  }
-}
+import {
+  HOME_SKILL_CARDS,
+  createHomeProjectId,
+  prepareHomeProjectCreationDraft,
+  toHomeProjectCard,
+  type HomeProjectCard,
+  type SkillMode,
+} from './homeProjectCreation'
 
 const ProjectLobby: React.FC = () => {
   const navigate = useNavigate()
-  const [projects, setProjects] = useState<ProjectCard[]>([])
+  const [projects, setProjects] = useState<HomeProjectCard[]>([])
   const [prompt, setPrompt] = useState('')
   const [model, setModel] = useState('默认创作模型')
   const [selectedSkill, setSelectedSkill] = useState<SkillMode>('short_drama')
   const [creating, setCreating] = useState(false)
   const [loadingProjects, setLoadingProjects] = useState(false)
+  const canCreate = prompt.trim().length > 0 && !creating
 
   const selectedSkillInfo = useMemo(
-    () => skillCards.find((item) => item.key === selectedSkill) ?? skillCards[2],
+    () => HOME_SKILL_CARDS.find((item) => item.key === selectedSkill) ?? HOME_SKILL_CARDS[2],
     [selectedSkill],
   )
 
@@ -117,7 +40,7 @@ const ProjectLobby: React.FC = () => {
         page: 1,
         pageSize: 12,
       })
-      setProjects((res.data?.items ?? []).map(toProjectCard))
+      setProjects((res.data?.items ?? []).map(toHomeProjectCard))
     } catch {
       setProjects([])
     } finally {
@@ -137,30 +60,19 @@ const ProjectLobby: React.FC = () => {
     }
     setCreating(true)
     try {
-      const name = summarizeTitle(content, selectedSkill)
-      const id = newProjectId()
+      const draft = prepareHomeProjectCreationDraft({
+        id: createHomeProjectId(),
+        prompt: content,
+        model,
+        skill: selectedSkillInfo,
+      })
       const res = await StudioProjectsService.createProjectApiV1StudioProjectsPost({
-        requestBody: {
-          id,
-          name,
-          description: [
-            `Skill: ${selectedSkillInfo.title}`,
-            `Model: ${model}`,
-            '',
-            content,
-          ].join('\n'),
-          style: '真人都市' as ProjectStyle,
-          visual_style: '现实',
-          seed: Math.floor(Math.random() * 99999),
-          unify_style: true,
-          default_video_ratio: selectedSkill === 'short_drama' ? '9:16' : '16:9',
-          progress: 8,
-        },
+        requestBody: draft.requestBody,
       })
       const created = res.data
       if (!created) throw new Error('empty project')
       message.success(`已创建项目：${created.name}`)
-      setProjects((prev) => [toProjectCard(created), ...prev])
+      setProjects((prev) => [toHomeProjectCard(created), ...prev])
       setPrompt('')
       navigate(`/projects/${created.id}`)
     } catch {
@@ -199,12 +111,13 @@ const ProjectLobby: React.FC = () => {
             <Input.TextArea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
+              disabled={creating}
               autoSize={{ minRows: 4, maxRows: 8 }}
               bordered={false}
               className="flova-home-input text-[20px]"
-              placeholder="想做什么视频？例如：女主被迫离婚后发现自己才是豪门继承人..."
+              placeholder="写下剧情大纲、广告创意或长视频想法。Agent 会总结标题并创建项目..."
               onPressEnter={(event) => {
-                if ((event.metaKey || event.ctrlKey) && !creating) {
+                if ((event.metaKey || event.ctrlKey) && canCreate) {
                   void handleCreateFromPrompt()
                 }
               }}
@@ -234,6 +147,7 @@ const ProjectLobby: React.FC = () => {
                   size="large"
                   loading={creating}
                   icon={<ArrowUpOutlined />}
+                  disabled={!canCreate}
                   onClick={() => void handleCreateFromPrompt()}
                   className="border-none bg-[#1d1d1f] text-white shadow-lg shadow-black/20"
                 />
@@ -242,7 +156,7 @@ const ProjectLobby: React.FC = () => {
           </div>
 
           <div className="mt-7 grid w-full max-w-[920px] grid-cols-1 gap-3 md:grid-cols-3">
-            {skillCards.map((skill) => (
+            {HOME_SKILL_CARDS.map((skill) => (
               <button
                 key={skill.key}
                 type="button"
