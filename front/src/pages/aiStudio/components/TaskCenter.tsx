@@ -114,6 +114,13 @@ function taskTone(task: TaskUiItem): { color: string; label: string } {
   return { color: 'default', label: '排队中' }
 }
 
+function taskProgressPercent(task: TaskUiItem): number {
+  if (task.status === 'succeeded') return 100
+  const raw = Number(task.progress)
+  if (!Number.isFinite(raw)) return 0
+  return Math.max(0, Math.min(100, Math.round(raw)))
+}
+
 export function TaskCenter() {
   const navigate = useNavigate()
   const [scopeFilter, setScopeFilter] = useState<'auto' | 'all' | 'current' | 'active' | 'settled'>('auto')
@@ -402,6 +409,7 @@ export function TaskCenter() {
                       const elapsed = formatElapsedMs(task.elapsedMs)
                       const startedAt = formatStartedAt(task.startedAtTs)
                       const highlighted = isTaskHighlighted(task, activeContexts)
+                      const progressPercent = taskProgressPercent(task)
                       return (
                         <div
                           key={task.taskId}
@@ -416,7 +424,7 @@ export function TaskCenter() {
                               <div className="mt-1 flex flex-wrap gap-2 text-xs text-gray-500">
                                 {highlighted ? <Tag color="blue">当前页面</Tag> : null}
                                 <Tag color={tone.color}>{tone.label}</Tag>
-                                <span>进度 {Math.max(0, Math.min(100, Math.round(task.progress)))}%</span>
+                                <span>进度 {progressPercent}%</span>
                                 {elapsed ? <span>耗时 {elapsed}</span> : null}
                               </div>
                               {startedAt ? <div className="mt-1 text-xs text-gray-400">开始于 {startedAt}</div> : null}
@@ -460,7 +468,7 @@ export function TaskCenter() {
                             </div>
                           </div>
                           <Progress
-                            percent={Math.max(0, Math.min(100, Math.round(task.progress)))}
+                            percent={progressPercent}
                             size="small"
                             status={
                               task.cancelRequested || task.status === 'failed'
