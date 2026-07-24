@@ -86,9 +86,9 @@ const ProjectLobby: React.FC = () => {
   }
 
   return (
-    <div className="relative h-full overflow-y-auto bg-[#f5f5f7] text-[#1d1d1f]">
-      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_13%_0%,rgba(255,45,85,.14),transparent_28%),radial-gradient(circle_at_37%_-7%,rgba(255,149,0,.12),transparent_24%),radial-gradient(circle_at_61%_-4%,rgba(52,199,89,.14),transparent_25%),radial-gradient(circle_at_85%_3%,rgba(0,122,255,.16),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f8f9fb_56%,#f5f5f7_100%)]" />
-      <div className="pointer-events-none fixed left-1/2 top-7 h-[390px] w-[720px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_190deg,rgba(255,45,85,.09),rgba(255,149,0,.075),rgba(52,199,89,.085),rgba(90,200,250,.11),rgba(175,82,222,.085),rgba(255,45,85,.09))] blur-3xl" />
+    <div className="relative h-full overflow-y-auto bg-transparent text-[#1d1d1f]">
+      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_5%_4%,rgba(255,59,92,.13),transparent_25%),radial-gradient(circle_at_31%_-4%,rgba(255,184,77,.14),transparent_25%),radial-gradient(circle_at_58%_-3%,rgba(80,220,128,.13),transparent_24%),radial-gradient(circle_at_84%_2%,rgba(90,200,250,.16),transparent_28%),linear-gradient(180deg,#f8f1e7_0%,#fbf7ef_44%,#f7f2ea_100%)]" />
+      <div className="pointer-events-none fixed left-[42%] top-3 h-[360px] w-[780px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_195deg,rgba(255,45,85,.10),rgba(255,149,0,.08),rgba(52,199,89,.08),rgba(90,200,250,.12),rgba(175,82,222,.075),rgba(255,45,85,.10))] blur-3xl" />
 
       <section className="relative px-8 pb-7 pt-8">
         <div className="relative mx-auto flex max-w-[1120px] flex-col items-center">
@@ -103,21 +103,22 @@ const ProjectLobby: React.FC = () => {
           </div>
 
           <h1 className="max-w-[900px] text-center text-5xl font-semibold leading-[1.03] tracking-normal text-[#1d1d1f] md:text-[76px]">
-            <span className="block">一段视频</span>
+            <span className="block">一段剧情</span>
             <span className="block">一条视频生产线</span>
           </h1>
           <p className="mt-5 max-w-[660px] text-center text-lg leading-relaxed text-black/43">
             把灵感交给创作助理，它会理解叙事意图，整理角色与镜头，并把每一次创作沉淀成可继续推进的项目。
           </p>
 
-          <div className="mt-10 w-full max-w-[920px] rounded-[32px] border border-black/8 bg-white/78 p-5 shadow-[0_26px_76px_rgba(0,0,0,.09)] backdrop-blur-2xl">
+          <div className="flova-prompt-shell mt-10 w-full max-w-[520px] rounded-[28px] p-[1px]">
+            <div className="relative rounded-[27px] bg-white/72 p-4 shadow-[0_22px_62px_rgba(95,56,36,.08)] backdrop-blur-2xl">
             <Input.TextArea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               disabled={creating}
-              autoSize={{ minRows: 4, maxRows: 8 }}
+              autoSize={{ minRows: 3, maxRows: 5 }}
               bordered={false}
-              className="flova-home-input text-[20px]"
+              className="flova-home-input text-[17px]"
               placeholder="写下剧情大纲、广告创意或长视频想法。创作助理会总结标题并创建项目..."
               onPressEnter={(event) => {
                 if ((event.metaKey || event.ctrlKey) && canCreate) {
@@ -125,12 +126,12 @@ const ProjectLobby: React.FC = () => {
                 }
               }}
             />
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
               <Button shape="circle" icon={<PlusOutlined />} className="apple-circle-button" />
               <Select
                 value={model}
                 onChange={setModel}
-                className="apple-pill-select min-w-[160px]"
+                className="apple-pill-select min-w-[138px]"
                 options={[
                   { value: '默认创作模型', label: '模型　默认' },
                   { value: 'Seed 2.0', label: 'Seed 2.0' },
@@ -155,6 +156,7 @@ const ProjectLobby: React.FC = () => {
                   className="border-none bg-[#1d1d1f] text-white shadow-lg shadow-black/20"
                 />
               </div>
+            </div>
             </div>
           </div>
 

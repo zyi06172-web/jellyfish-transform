@@ -1,4 +1,26 @@
 /* Tailwind and Ant Design compatibility */
+.flova-shell-bg {
+  position: relative;
+  background:
+    radial-gradient(circle at 4% 4%, rgba(255, 59, 92, 0.13), transparent 24%),
+    radial-gradient(circle at 22% -3%, rgba(255, 184, 77, 0.13), transparent 25%),
+    radial-gradient(circle at 50% -5%, rgba(80, 220, 128, 0.11), transparent 23%),
+    radial-gradient(circle at 82% 0%, rgba(90, 200, 250, 0.15), transparent 29%),
+    linear-gradient(180deg, #f8f1e7 0%, #fbf7ef 48%, #f7f2ea 100%);
+}
+
+.flova-shell-bg::before {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(105deg, rgba(255, 255, 255, 0.14), transparent 22%, rgba(255, 255, 255, 0.18) 45%, transparent 68%),
+    radial-gradient(circle at 7% 18%, rgba(255, 45, 85, 0.07), transparent 18%),
+    radial-gradient(circle at 14% 0%, rgba(90, 200, 250, 0.08), transparent 20%);
+  mix-blend-mode: screen;
+}
+
 .ant-card {
   border: 1px solid #f0f0f0;
 }
@@ -19,6 +41,41 @@
 }
 .animate-fadeIn {
   animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes promptBorderFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.flova-prompt-shell {
+  position: relative;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 59, 92, 0.36),
+    rgba(255, 184, 77, 0.12),
+    rgba(255, 255, 255, 0.24),
+    rgba(255, 45, 85, 0.34),
+    rgba(90, 200, 250, 0.12)
+  );
+  background-size: 260% 260%;
+  animation: promptBorderFlow 7s ease-in-out infinite;
+  box-shadow:
+    0 0 0 1px rgba(255, 59, 92, 0.08),
+    0 0 42px rgba(255, 59, 92, 0.07),
+    0 24px 70px rgba(120, 88, 52, 0.08);
+}
+
+.flova-prompt-shell::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: -10px;
+  border-radius: 36px;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 59, 92, 0.12), transparent 52%);
+  filter: blur(18px);
+  opacity: 0.75;
 }
 
 .flova-home-input,
