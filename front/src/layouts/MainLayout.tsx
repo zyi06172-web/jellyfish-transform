@@ -1,8 +1,6 @@
 import React, { useMemo } from 'react'
-import { GiftOutlined, HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
+import { HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { TaskCenter } from '../pages/aiStudio/components/TaskCenter'
-import { TaskRuntimeProvider } from '../pages/aiStudio/components/TaskRuntimeProvider'
 
 type NavItem = {
   key: string
@@ -12,12 +10,12 @@ type NavItem = {
 }
 
 const navItems: NavItem[] = [
-  { key: 'home', label: 'ホーム', href: '/projects', icon: <HomeOutlined /> },
-  { key: 'projects', label: 'プロジェクト', href: '/projects', icon: <ProjectOutlined /> },
+  { key: 'home', label: '主页', href: '/projects', icon: <HomeOutlined /> },
+  { key: 'projects', label: '项目', href: '/projects', icon: <ProjectOutlined /> },
   { key: 'tv', label: '社区TV', href: '/community-tv', icon: <PlaySquareOutlined /> },
 ]
 
-/** Flova 型全局外壳：只保留左侧核心导航，业务页面独占主区域。 */
+/** 极简全局外壳：去掉传统后台顶部栏和任务中心，让主页/工作台拥有完整画布。 */
 const MainLayout: React.FC = () => {
   const location = useLocation()
 
@@ -29,48 +27,35 @@ const MainLayout: React.FC = () => {
   }, [location.pathname])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#050505] text-white">
-      <aside className="flex w-[108px] shrink-0 flex-col items-center border-r border-white/8 bg-[#070707] py-7">
-        <Link to="/projects" className="mb-10 flex items-center justify-center">
-          <img src="/logo.svg" alt="Flova" className="h-11 w-11" />
+    <div className="flex h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
+      <aside className="relative z-20 flex w-[104px] shrink-0 flex-col items-center border-r border-black/5 bg-white/72 px-3 py-6 shadow-[18px_0_60px_rgba(0,0,0,.05)] backdrop-blur-2xl">
+        <Link to="/projects" className="mb-9 flex flex-col items-center gap-2">
+          <img src="/logo.svg" alt="短剧工厂" className="h-12 w-12 rounded-[18px]" />
+          <span className="text-[11px] font-semibold tracking-normal text-black/50">短剧工厂</span>
         </Link>
 
-        <nav className="flex w-full flex-col items-center gap-7">
+        <nav className="flex w-full flex-col items-center gap-4">
           {navItems.map((item) => {
             const active = activeKey === item.key
             return (
               <Link
                 key={item.key}
                 to={item.href}
-                className={`flex w-full flex-col items-center gap-2 text-center transition ${
-                  active ? 'text-white' : 'text-white/42 hover:text-white/72'
+                className={`group flex w-full flex-col items-center gap-2 rounded-[24px] px-2 py-3 text-center transition ${
+                  active ? 'bg-black text-white shadow-xl shadow-black/10' : 'text-black/42 hover:bg-black/[.045] hover:text-black/72'
                 }`}
               >
-                <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl text-3xl ${
-                    active ? 'bg-white/10 ring-1 ring-white/18' : ''
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                <span className="text-sm font-semibold">{item.label}</span>
+                <span className="text-[25px] leading-none">{item.icon}</span>
+                <span className="text-xs font-semibold">{item.label}</span>
               </Link>
             )
           })}
         </nav>
-
-        <div className="mt-auto flex flex-col items-center gap-5 text-white/42">
-          <div className="h-px w-8 bg-white/12" />
-          <GiftOutlined className="rounded-full bg-white/10 p-2 text-4xl text-[#ffd28a]" />
-        </div>
       </aside>
 
-      <TaskRuntimeProvider>
-        <main className="min-w-0 flex-1 overflow-hidden">
-          <Outlet />
-        </main>
-        <TaskCenter />
-      </TaskRuntimeProvider>
+      <main className="min-w-0 flex-1 overflow-auto">
+        <Outlet />
+      </main>
     </div>
   )
 }

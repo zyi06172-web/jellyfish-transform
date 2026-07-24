@@ -20,28 +20,28 @@ type AgentStep = 'format' | 'characters' | 'audio' | 'animation'
 
 const stepCopy: Record<AgentStep, { title: string; body: string; action: string; detail: string }> = {
   format: {
-    title: '制作方向を確認してください',
-    body: '剧情已分析完毕。接下来需要确认视频比例、时长和影像质感。',
-    action: '縦型（9:16）・1〜2分・写実的ドラマスタイルで制作開始',
-    detail: 'SNS・ショートドラマ向けの縦型フォーマット、リアルな映像表現で制作を進める',
+    title: '确认制作方向',
+    body: '剧情已经完成初步分析。接下来先确认视频比例、时长和影像质感。',
+    action: '竖屏 9:16 · 1 到 2 分钟 · 写实短剧风格',
+    detail: '适合社交媒体和短剧平台，先按真人写实的影像质感推进。',
   },
   characters: {
-    title: 'キャラクター画像の生成へ進みますか？',
-    body: '我会同时准备角色、场景、服装和道具，让 Key Elements 可以直接进入分镜。',
-    action: 'キャラクター画像の生成へ進む',
-    detail: '苏眠・傅寒舟・苏婉・医生の参照用キャラクター画像を生成して制作を続ける',
+    title: '生成角色画像和关键元素',
+    body: '我会同时准备角色、场景、服装和道具，让关键元素可以直接进入分镜。',
+    action: '继续生成角色画像',
+    detail: '为主要角色、反派、医生和关键道具生成参考图，并登记到关键元素。',
   },
   audio: {
-    title: '音声リファレンスをどう作りますか？',
+    title: '选择角色声音生成方式',
     body: '如果没有上传声音样本，可以先用低消耗旁白模型生成角色音频引用。',
-    action: 'ナレーションモデルで音声を生成する（クレジット消費が少ない）',
-    detail: '各キャラクターの脚本から3〜5秒のセリフを抽出し、key_element_audioに登録する',
+    action: '用旁白模型生成角色音频',
+    detail: '从每个角色脚本中抽取 3 到 5 秒台词，生成声音引用并登记。',
   },
   animation: {
-    title: 'アニメーション生成へ進みますか？',
+    title: '开始生成动画草稿',
     body: '分镜、关键元素、音频引用已经排布完成。下一步可以生成动画草稿。',
-    action: '現在のストーリーボードでアニメーション生成を開始',
-    detail: '不满意的角色或镜头可以在右侧随时提出，只局部重生成，不影响主进度',
+    action: '使用当前分镜生成动画',
+    detail: '不满意的角色或镜头可以在右侧随时提出，只局部重生成，不影响主进度。',
   },
 }
 
@@ -59,17 +59,17 @@ function buildKeyElements(story: string) {
   const isDrama = /婚|总裁|复仇|妹妹|医生|孩子|离婚|豪门|女主|男主/.test(story)
   if (isDrama) {
     return [
-      { name: 'Element_ヒロイン_苏眠', kind: '画像', color: 'green', desc: '白裙、受伤妆、压抑但倔强' },
-      { name: 'Element_婚约者_傅寒舟', kind: '画像', color: 'blue', desc: '高级黑西装、冷峻表情' },
-      { name: 'Element_妹妹_苏婉', kind: '画像', color: 'purple', desc: '礼服、虚伪笑容、反派气质' },
-      { name: 'Element_医生', kind: '画像', color: 'cyan', desc: '白衣、眼镜、专业表情' },
+      { name: '女主角 · 苏眠', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '白裙、受伤妆、压抑但倔强' },
+      { name: '男主角 · 傅寒舟', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '高级黑西装、冷峻表情' },
+      { name: '反派妹妹 · 苏婉', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '礼服、虚伪笑容、反派气质' },
+      { name: '医生', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '白衣、眼镜、专业表情' },
     ]
   }
   return [
-    { name: 'Element_主人公', kind: '画像', color: 'green', desc: '核心角色参考图' },
-    { name: 'Element_对手角色', kind: '画像', color: 'blue', desc: '冲突人物参考图' },
-    { name: 'Element_主场景', kind: '画像', color: 'purple', desc: '主要空间与氛围' },
-    { name: 'Element_关键道具', kind: '画像', color: 'cyan', desc: '推动剧情的道具' },
+    { name: '主人公', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '核心角色参考图' },
+    { name: '对手角色', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '冲突人物参考图' },
+    { name: '主场景', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '主要空间与氛围' },
+    { name: '关键道具', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '推动剧情的道具' },
   ]
 }
 
@@ -108,11 +108,11 @@ const ProjectWorkbench: React.FC = () => {
 
   if (!project && !projectLoading) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#050505] text-white">
+      <div className="flex h-full items-center justify-center bg-[#f5f5f7] text-[#1d1d1f]">
         <div className="text-center">
-          <Empty description={<span className="text-white/50">项目不存在</span>} />
+          <Empty description={<span className="text-black/50">项目不存在</span>} />
           <Link to="/projects">
-            <Button ghost icon={<ArrowLeftOutlined />}>
+            <Button icon={<ArrowLeftOutlined />}>
               返回主页
             </Button>
           </Link>
@@ -122,40 +122,40 @@ const ProjectWorkbench: React.FC = () => {
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[330px_minmax(360px,1fr)_560px] gap-3 overflow-hidden bg-[#050505] p-3 text-white">
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-white/12 bg-[#0b0b0d]/92">
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-          <div className="flex items-center gap-3 text-xl font-bold">
-            <DownOutlined className="text-xs text-white/50" />
-            ストーリーボード
+    <div className="grid h-full min-h-0 grid-cols-[320px_minmax(360px,1fr)_520px] gap-4 overflow-hidden bg-[#f5f5f7] p-4 text-[#1d1d1f]">
+      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+        <div className="flex h-16 items-center justify-between border-b border-black/5 px-5">
+          <div className="flex items-center gap-3 text-xl font-semibold">
+            <DownOutlined className="text-xs text-black/35" />
+            故事板
           </div>
-          <EllipsisOutlined className="text-xl text-white/60" />
+          <EllipsisOutlined className="text-xl text-black/40" />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <section className="border-b border-white/10 p-5">
-            <div className="mb-4 flex items-center gap-3 text-xl font-bold">
-              <DownOutlined className="text-xs text-white/50" />
-              キーエレメント
+          <section className="border-b border-black/5 p-5">
+            <div className="mb-4 flex items-center gap-3 text-xl font-semibold">
+              <DownOutlined className="text-xs text-black/35" />
+              关键元素
             </div>
             <div className="space-y-5">
               {keyElements.map((element) => (
                 <div key={element.name}>
-                  <div className="mb-3 flex items-center gap-2 text-base font-semibold text-white/56">
+                  <div className="mb-3 flex items-center gap-2 text-base font-semibold text-black/58">
                     <DownOutlined className="text-xs" />
                     {element.name}
                   </div>
-                  <div className="ml-9 flex items-end gap-2">
-                    <div className="flex h-[72px] w-[132px] items-center rounded-2xl bg-gradient-to-br from-[#29313a] to-[#415261] px-4 text-sm text-white/46">
-                      <AudioOutlined className="mr-2" /> Element...
+                  <div className="ml-8 flex items-end gap-2">
+                    <div className="flex h-[72px] w-[126px] items-center rounded-[22px] bg-black/[.045] px-4 text-sm text-black/42">
+                      <AudioOutlined className="mr-2" /> 音频引用
                     </div>
-                    <div className={`h-[96px] w-[68px] rounded-2xl border-2 border-${element.color}-400 bg-[linear-gradient(160deg,rgba(255,255,255,.24),rgba(255,255,255,.05))]`} />
-                    <button className="h-9 w-9 rounded-xl border border-dashed border-white/24 text-xl text-white/40">+</button>
+                    <div className={`h-[96px] w-[68px] rounded-[22px] bg-gradient-to-br ${element.tone} shadow-inner`} />
+                    <button className="h-9 w-9 rounded-2xl border border-dashed border-black/18 text-xl text-black/38">+</button>
                   </div>
-                  <div className="ml-9 mt-2 flex gap-2">
-                    <Tag color="green" className="mr-0 bg-white/10">
+                  <div className="ml-8 mt-2 flex gap-2">
+                    <Tag className="mr-0 rounded-full border-0 bg-black/[.06] text-black/54">
                       {element.kind}
                     </Tag>
-                    <span className="truncate text-xs text-white/36">{element.desc}</span>
+                    <span className="truncate text-xs text-black/38">{element.desc}</span>
                   </div>
                 </div>
               ))}
@@ -163,58 +163,58 @@ const ProjectWorkbench: React.FC = () => {
           </section>
           <section className="p-5">
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-xl font-bold">
-                <DownOutlined className="text-xs text-white/50" />
-                未分類素材
+              <div className="flex items-center gap-3 text-xl font-semibold">
+                <DownOutlined className="text-xs text-black/35" />
+                未分类素材
               </div>
-              <span className="text-sm text-white/36">すべて</span>
+              <span className="text-sm text-black/35">全部</span>
             </div>
-            <div className="flex h-[220px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[.025] text-center text-white/22">
+            <div className="flex h-[220px] flex-col items-center justify-center rounded-[26px] border border-black/5 bg-black/[.025] text-center text-black/28">
               <PlusOutlined className="mb-4 text-2xl" />
-              ストーリーボードに配置されていない生成済み素材がここに表示されます。
+              尚未放入故事板的生成素材会显示在这里。
             </div>
           </section>
         </div>
-        <div className="flex h-16 items-center justify-center gap-4 border-t border-white/10">
-          <Button shape="round" ghost>−</Button>
-          <span className="font-semibold text-white/70">70%</span>
-          <Button shape="round" ghost>+</Button>
+        <div className="flex h-16 items-center justify-center gap-4 border-t border-black/5">
+          <Button shape="round">−</Button>
+          <span className="font-semibold text-black/55">70%</span>
+          <Button shape="round">+</Button>
         </div>
       </aside>
 
-      <main className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-white/12 bg-[#09090a]/95">
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-          <div className="min-w-0 text-xl font-bold">
-            プレビュー <span className="text-base font-normal text-white/25">Element_ヒロイン_苏眠_img</span>
+      <main className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+        <div className="flex h-16 items-center justify-between border-b border-black/5 px-5">
+          <div className="min-w-0 text-xl font-semibold">
+            预览 <span className="text-base font-normal text-black/28">女主角参考图</span>
           </div>
           <div className="flex gap-2">
-            <Tag className="rounded-full border-white/10 bg-white/5 px-4 py-1 text-white/54">Nano B...</Tag>
-            <Tag className="rounded-full border-white/10 bg-white/5 px-4 py-1 text-white/54">1K (76...)</Tag>
+            <Tag className="rounded-full border-0 bg-black/[.06] px-4 py-1 text-black/48">默认模型</Tag>
+            <Tag className="rounded-full border-0 bg-black/[.06] px-4 py-1 text-black/48">1K 预览</Tag>
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-[560px] rounded-[30px] bg-[#111] p-4">
-            <div className="relative aspect-[9/16] overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_32%_36%,rgba(255,255,255,.30),transparent_18%),linear-gradient(140deg,#1a2329,#2b3944_42%,#101013)]">
-              <div className="absolute left-0 top-0 h-full w-[49%] border-r border-white/20 bg-[radial-gradient(circle_at_52%_27%,rgba(255,230,214,.72),transparent_18%),linear-gradient(180deg,rgba(148,163,184,.42),rgba(15,23,42,.42))]" />
-              <div className="absolute right-[10%] top-[16%] h-[72%] w-[28%] rounded-t-full bg-[linear-gradient(180deg,rgba(255,255,255,.86),rgba(226,232,240,.55))]" />
-              <div className="absolute bottom-8 left-6 max-w-[240px] rounded-2xl bg-black/36 p-4 backdrop-blur">
-                <div className="text-sm text-white/48">剧情总结</div>
-                <div className="mt-2 line-clamp-6 text-lg leading-relaxed text-white">
+          <div className="mx-auto max-w-[520px] rounded-[34px] bg-[#f5f5f7] p-4 shadow-inner">
+            <div className="relative aspect-[9/16] overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_32%_36%,rgba(255,255,255,.82),transparent_18%),linear-gradient(140deg,#dbeafe,#e5e7eb_42%,#fdf2f8)]">
+              <div className="absolute left-0 top-0 h-full w-[49%] border-r border-white/70 bg-[radial-gradient(circle_at_52%_27%,rgba(255,230,214,.84),transparent_18%),linear-gradient(180deg,rgba(148,163,184,.30),rgba(255,255,255,.38))]" />
+              <div className="absolute right-[10%] top-[16%] h-[72%] w-[28%] rounded-t-full bg-[linear-gradient(180deg,rgba(255,255,255,.94),rgba(226,232,240,.68))]" />
+              <div className="absolute bottom-8 left-6 max-w-[240px] rounded-[22px] bg-white/62 p-4 shadow-lg backdrop-blur-2xl">
+                <div className="text-sm text-black/38">剧情总结</div>
+                <div className="mt-2 line-clamp-6 text-lg leading-relaxed text-[#1d1d1f]">
                   {story}
                 </div>
               </div>
-              <button className="absolute left-5 top-[44%] flex h-14 w-14 items-center justify-center rounded-full bg-black/40 text-white/70">
+              <button className="absolute left-5 top-[44%] flex h-14 w-14 items-center justify-center rounded-full bg-white/58 text-black/54 shadow backdrop-blur">
                 <UpOutlined />
               </button>
-              <button className="absolute bottom-[35%] left-5 flex h-14 w-14 items-center justify-center rounded-full bg-black/40 text-white/70">
+              <button className="absolute bottom-[35%] left-5 flex h-14 w-14 items-center justify-center rounded-full bg-white/58 text-black/54 shadow backdrop-blur">
                 <DownOutlined />
               </button>
             </div>
           </div>
         </div>
-        <div className="flex h-16 items-center justify-center gap-4 border-t border-white/10 px-5">
-          <Button ghost shape="round" icon={<AudioOutlined />}>プロンプト</Button>
-          <Button ghost shape="round" icon={<ReloadOutlined />}>再生成</Button>
+        <div className="flex h-16 items-center justify-center gap-4 border-t border-black/5 px-5">
+          <Button shape="round" icon={<AudioOutlined />}>提示词</Button>
+          <Button shape="round" icon={<ReloadOutlined />}>重新生成</Button>
           {chapters[0] && projectId ? (
             <Button type="primary" shape="round" onClick={() => navigate(getChapterStudioPath(projectId, chapters[0].id))}>
               真实分镜工作室
@@ -223,31 +223,31 @@ const ProjectWorkbench: React.FC = () => {
         </div>
       </main>
 
-      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-white/12 bg-[#0b0b0d]/95">
-        <div className="flex h-16 items-center justify-between border-b border-white/10 px-6">
-          <div className="text-xl font-bold">チャット</div>
-          <Button shape="circle" type="text" className="text-white/45">×</Button>
+      <aside className="flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl">
+        <div className="flex h-16 items-center justify-between border-b border-black/5 px-6">
+          <div className="text-xl font-semibold">Agent 对话</div>
+          <Button shape="circle" type="text" className="text-black/38">×</Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
-          <div className="mb-6 space-y-3 text-lg leading-relaxed text-white/75">
-            <div>• ✅ {project?.name ?? '新项目'} — Agent がタイトルを生成</div>
-            <div>• ✅ 剧情总结已写入项目记忆</div>
-            <div>• ✅ Key Elements 初稿已准备</div>
+          <div className="mb-6 space-y-3 text-lg leading-relaxed text-black/62">
+            <div>• 已生成项目标题：{project?.name ?? '新项目'}</div>
+            <div>• 剧情总结已写入项目记忆</div>
+            <div>• 关键元素初稿已准备</div>
           </div>
-          <div className="my-8 h-px bg-white/10" />
-          <div className="text-lg leading-relaxed text-white/72">
+          <div className="my-8 h-px bg-black/6" />
+          <div className="text-lg leading-relaxed text-black/62">
             <p>{activeStepCopy.body}</p>
-            <p className="mt-4">{activeStepCopy.title}</p>
+            <p className="mt-4 font-semibold text-[#1d1d1f]">{activeStepCopy.title}</p>
           </div>
           <button
             type="button"
             onClick={advanceStep}
-            className="mt-8 w-full rounded-[26px] border border-white/8 bg-gradient-to-br from-[#41251f] via-[#1b2021] to-[#152615] p-7 text-left text-lg leading-relaxed text-white shadow-2xl transition hover:border-[#a9c86b]/50"
+            className="mt-8 w-full rounded-[30px] border border-black/5 bg-[#1d1d1f] p-7 text-left text-lg leading-relaxed text-white shadow-[0_24px_70px_rgba(0,0,0,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_30px_90px_rgba(0,0,0,.22)]"
           >
-            <div className="font-bold">{activeStepCopy.action}</div>
+            <div className="font-semibold">{activeStepCopy.action}</div>
             <div className="mt-2 text-white/70">{activeStepCopy.detail}</div>
             <div className="mt-5 flex justify-end">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/14">
                 <ArrowUpOutlined />
               </span>
             </div>
@@ -255,7 +255,7 @@ const ProjectWorkbench: React.FC = () => {
           {agentNotes.length ? (
             <div className="mt-8 space-y-3">
               {agentNotes.map((note, index) => (
-                <div key={`${note}-${index}`} className="rounded-2xl bg-white/[.055] px-4 py-3 text-sm text-white/62">
+                <div key={`${note}-${index}`} className="rounded-2xl bg-black/[.045] px-4 py-3 text-sm text-black/58">
                   {note}
                 </div>
               ))}
@@ -266,36 +266,36 @@ const ProjectWorkbench: React.FC = () => {
               {steps.map((step, index) => (
                 <div
                   key={step}
-                  className={`h-2 flex-1 rounded-full ${index <= activeStepIndex ? 'bg-[#a9c86b]' : 'bg-white/12'}`}
+                  className={`h-2 flex-1 rounded-full ${index <= activeStepIndex ? 'bg-[#1d1d1f]' : 'bg-black/8'}`}
                 />
               ))}
             </div>
             <Progress
               percent={Math.round(((activeStepIndex + 1) / steps.length) * 100)}
               showInfo={false}
-              strokeColor="#a9c86b"
-              trailColor="rgba(255,255,255,.1)"
+              strokeColor="#1d1d1f"
+              trailColor="rgba(0,0,0,.06)"
             />
           </div>
         </div>
-        <div className="border-t border-white/10 p-4">
-          <div className="rounded-[26px] border border-white/12 bg-black/70 p-3">
+        <div className="border-t border-black/5 p-4">
+          <div className="rounded-[28px] border border-black/5 bg-white p-3 shadow-sm">
             <Input.TextArea
               value={messageText}
               onChange={(event) => setMessageText(event.target.value)}
               autoSize={{ minRows: 2, maxRows: 4 }}
               bordered={false}
               className="flova-chat-input"
-              placeholder="メッセージを入力..."
+              placeholder="输入你的修改意见，例如：女主不够好看，重新生成一个..."
               onPressEnter={(event) => {
                 if (event.metaKey || event.ctrlKey) submitFreeMessage()
               }}
             />
             <div className="mt-3 flex items-center gap-3">
-              <Button shape="circle" ghost icon={<PlusOutlined />} />
-              <Button shape="circle" ghost icon={<AppstoreOutlined />} />
-              <Button shape="circle" ghost icon={<PictureOutlined />} />
-              <Button shape="circle" ghost icon={<AudioOutlined />} className="ml-auto" />
+              <Button shape="circle" icon={<PlusOutlined />} />
+              <Button shape="circle" icon={<AppstoreOutlined />} />
+              <Button shape="circle" icon={<PictureOutlined />} />
+              <Button shape="circle" icon={<AudioOutlined />} className="ml-auto" />
               <Button shape="circle" icon={<ArrowUpOutlined />} onClick={submitFreeMessage} />
             </div>
           </div>

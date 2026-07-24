@@ -25,27 +25,27 @@ const skillCards: Array<{
   key: SkillMode
   title: string
   subtitle: string
-  image: string
+  accent: string
   hot?: boolean
 }> = [
   {
     key: 'long_video',
     title: '长视频制作',
-    subtitle: '章节化叙事、连续镜头与完整成片',
-    image: 'linear-gradient(135deg, rgba(20,184,166,.32), rgba(37,99,235,.22))',
+    subtitle: '适合完整叙事、系列节目和品牌纪录片',
+    accent: 'from-[#a7f3d0] via-[#bfdbfe] to-[#f5f5f7]',
   },
   {
     key: 'commercial',
     title: '商业广告制作',
-    subtitle: '产品卖点、广告脚本与高转化素材',
-    image: 'linear-gradient(135deg, rgba(249,115,22,.34), rgba(37,99,235,.20))',
+    subtitle: '围绕产品卖点生成脚本、镜头和投放素材',
+    accent: 'from-[#fed7aa] via-[#dbeafe] to-[#f5f5f7]',
     hot: true,
   },
   {
     key: 'short_drama',
     title: '短剧制作',
     subtitle: '爽点、反转、付费卡点和竖屏分镜',
-    image: 'linear-gradient(135deg, rgba(168,85,247,.30), rgba(20,184,166,.20))',
+    accent: 'from-[#ddd6fe] via-[#bfdbfe] to-[#ccfbf1]',
     hot: true,
   },
 ]
@@ -58,7 +58,7 @@ function newProjectId() {
   return `p_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
-/** 模拟 Agent 对剧情大纲的标题总结，先实现 Flova 式留档体验。 */
+/** 模拟 Agent 对剧情大纲的标题总结，先实现首页输入后自动留档。 */
 function summarizeTitle(prompt: string, mode: SkillMode) {
   const cleaned = prompt
     .replace(/\s+/g, ' ')
@@ -69,9 +69,9 @@ function summarizeTitle(prompt: string, mode: SkillMode) {
     return firstClause.length > 18 ? `${firstClause.slice(0, 18)}...` : firstClause
   }
   const fallback: Record<SkillMode, string> = {
-    long_video: '未命名长视频企划',
-    commercial: '未命名广告企划',
-    short_drama: '未命名短剧企划',
+    long_video: '未命名长视频项目',
+    commercial: '未命名广告项目',
+    short_drama: '未命名短剧项目',
   }
   return fallback[mode]
 }
@@ -96,7 +96,7 @@ const ProjectLobby: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<ProjectCard[]>([])
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState('Nano Banana')
+  const [model, setModel] = useState('默认创作模型')
   const [selectedSkill, setSelectedSkill] = useState<SkillMode>('short_drama')
   const [creating, setCreating] = useState(false)
   const [loadingProjects, setLoadingProjects] = useState(false)
@@ -155,7 +155,7 @@ const ProjectLobby: React.FC = () => {
       })
       const created = res.data
       if (!created) throw new Error('empty project')
-      message.success(`Agent 已创建项目：${created.name}`)
+      message.success(`已创建项目：${created.name}`)
       setProjects((prev) => [toProjectCard(created), ...prev])
       setPrompt('')
       navigate(`/projects/${created.id}`)
@@ -167,122 +167,116 @@ const ProjectLobby: React.FC = () => {
   }
 
   return (
-    <div className="min-h-full overflow-y-auto bg-[#050505] text-white">
-      <div className="relative min-h-[62vh] px-6 pt-8 pb-9">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_8%,rgba(249,115,22,.24),transparent_30%),radial-gradient(circle_at_78%_2%,rgba(20,184,166,.20),transparent_32%),linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.88))]" />
-        <div className="relative mx-auto flex max-w-[1320px] flex-col items-center">
-          <div className="mb-8 flex w-full items-center justify-end gap-4">
-            <div className="hidden rounded-full border border-white/15 bg-gradient-to-r from-[#3c5f2f] to-[#2c63a4] px-7 py-2 text-sm font-semibold text-[#ffd99b] shadow-lg md:block">
-              💰 AI广告コンテスト。最大11,500ドルを勝ち取れ！
+    <div className="h-full overflow-y-auto bg-[#f5f5f7] text-[#1d1d1f]">
+      <section className="relative min-h-[62vh] px-8 pb-12 pt-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(0,122,255,.12),transparent_28%),radial-gradient(circle_at_82%_4%,rgba(52,199,89,.13),transparent_32%),linear-gradient(180deg,#ffffff,#f5f5f7_72%)]" />
+        <div className="relative mx-auto flex max-w-[1180px] flex-col items-center">
+          <div className="mb-9 flex w-full items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-semibold text-black/45">AI 视频创作 Agent</div>
+              <div className="mt-1 text-lg font-semibold">短剧工厂</div>
             </div>
-            <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-semibold backdrop-blur">
-              🪙 87 <span className="mx-2 text-white/30">|</span> Free
+            <div className="rounded-full border border-black/5 bg-white/70 px-4 py-2 text-sm font-semibold text-black/56 shadow-sm backdrop-blur-2xl">
+              当前计划：Free
             </div>
           </div>
 
-          <h1 className="text-center font-serif text-5xl leading-tight tracking-normal text-white md:text-7xl">
-            Flova 1.0 — あなた専属のAI動画クリエイティブ
+          <h1 className="max-w-[980px] text-center text-6xl font-semibold leading-[1.08] tracking-normal text-[#1d1d1f] md:text-7xl">
+            用一句剧情大纲，启动一条视频生产线。
           </h1>
-          <div className="mt-7 text-center font-serif text-5xl text-white md:text-7xl">
-            Agent
-          </div>
-          <p className="mt-6 text-center text-lg tracking-wide text-white/42">
-            ワークフローと感性をSkillに。あなたらしく動くAI。
+          <p className="mt-6 max-w-[700px] text-center text-xl leading-relaxed text-black/45">
+            输入故事、广告创意或长视频想法。Agent 会总结标题、创建项目，并把它放进最近项目里，方便你继续制作。
           </p>
 
-          <div className="mt-14 w-full max-w-[980px] rounded-[28px] border border-[#a9c86b]/70 bg-black/72 p-6 shadow-[0_0_80px_rgba(117,143,71,.14)] backdrop-blur">
+          <div className="mt-12 w-full max-w-[960px] rounded-[34px] border border-black/8 bg-white/78 p-5 shadow-[0_30px_90px_rgba(0,0,0,.10)] backdrop-blur-2xl">
             <Input.TextArea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               autoSize={{ minRows: 4, maxRows: 8 }}
               bordered={false}
               className="flova-home-input text-[22px]"
-              placeholder="どんな動画を作りますか？"
+              placeholder="想做什么视频？例如：女主被迫离婚后发现自己才是豪门继承人..."
               onPressEnter={(event) => {
                 if ((event.metaKey || event.ctrlKey) && !creating) {
                   void handleCreateFromPrompt()
                 }
               }}
             />
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button shape="circle" ghost icon={<PlusOutlined />} />
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Button shape="circle" icon={<PlusOutlined />} className="apple-circle-button" />
               <Select
                 value={model}
                 onChange={setModel}
-                className="flova-pill-select min-w-[174px]"
-                popupClassName="flova-dark-select"
+                className="apple-pill-select min-w-[160px]"
                 options={[
-                  { value: 'Nano Banana', label: '⌘ モデル　新規' },
+                  { value: '默认创作模型', label: '模型　默认' },
                   { value: 'Seed 2.0', label: 'Seed 2.0' },
                   { value: 'Veo', label: 'Veo' },
                 ]}
               />
-              <Button ghost className="flova-pill-button" icon={<GiftOutlined />}>
+              <Button className="apple-pill-button" icon={<GiftOutlined />}>
                 Skill
               </Button>
-              <Button ghost className="flova-pill-button" icon={<VideoCameraOutlined />}>
-                アセットライブラリ
+              <Button className="apple-pill-button" icon={<VideoCameraOutlined />}>
+                资产库
               </Button>
               <div className="ml-auto flex items-center gap-3">
-                <Button shape="circle" ghost icon={<AudioOutlined />} />
+                <Button shape="circle" icon={<AudioOutlined />} className="apple-circle-button" />
                 <Button
                   shape="circle"
                   size="large"
                   loading={creating}
                   icon={<ArrowUpOutlined />}
                   onClick={() => void handleCreateFromPrompt()}
-                  className="border-none bg-gradient-to-br from-[#c7b79b] to-[#8b9972] text-black"
+                  className="border-none bg-[#1d1d1f] text-white shadow-lg shadow-black/20"
                 />
               </div>
             </div>
           </div>
 
-          <div className="mt-9 text-center text-base font-semibold text-white/36">人気のスキル</div>
-          <div className="mt-5 grid w-full max-w-[1180px] grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-10 text-center text-base font-semibold text-black/38">选择制作风格</div>
+          <div className="mt-5 grid w-full max-w-[1000px] grid-cols-1 gap-4 md:grid-cols-3">
             {skillCards.map((skill) => (
               <button
                 key={skill.key}
                 type="button"
                 onClick={() => setSelectedSkill(skill.key)}
-                className={`relative flex h-[78px] items-center gap-4 rounded-2xl border px-6 text-left transition ${
+                className={`relative flex min-h-[132px] flex-col justify-between rounded-[28px] border p-6 text-left shadow-sm transition ${
                   selectedSkill === skill.key
-                    ? 'border-[#a7c26e]/80 bg-white/[.13]'
-                    : 'border-white/12 bg-white/[.045] hover:border-white/28'
+                    ? 'border-black/10 bg-white shadow-[0_22px_60px_rgba(0,0,0,.10)]'
+                    : 'border-black/5 bg-white/58 hover:bg-white hover:shadow-[0_18px_44px_rgba(0,0,0,.08)]'
                 }`}
-                style={{ backgroundImage: selectedSkill === skill.key ? skill.image : undefined }}
               >
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-xl">
-                  {skill.key === 'long_video' ? '🎞️' : skill.key === 'commercial' ? '🧴' : '🎭'}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-lg font-semibold text-white">{skill.title}</div>
-                  <div className="truncate text-sm text-white/44">{skill.subtitle}</div>
+                <div className={`absolute inset-x-4 top-4 h-12 rounded-2xl bg-gradient-to-r ${skill.accent} opacity-80`} />
+                <div className="relative mt-12">
+                  <div className="text-xl font-semibold text-[#1d1d1f]">{skill.title}</div>
+                  <div className="mt-2 text-sm leading-relaxed text-black/45">{skill.subtitle}</div>
                 </div>
                 {skill.hot ? (
-                  <span className="absolute -top-3 right-5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-[#ffd28a]">
-                    人気
+                  <span className="absolute right-5 top-5 rounded-full bg-black px-3 py-1 text-xs font-bold text-white">
+                    推荐
                   </span>
                 ) : null}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      <section className="mx-auto w-full max-w-[1320px] px-6 pb-16">
+      <section className="mx-auto w-full max-w-[1180px] px-8 pb-16">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-3xl font-bold tracking-normal">最近のプロジェクト</h2>
-          <Button type="text" className="text-white/45">
-            すべて表示
+          <h2 className="text-3xl font-semibold tracking-normal">最近项目</h2>
+          <Button type="text" className="text-black/45">
+            查看全部
           </Button>
         </div>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <button
             type="button"
-            onClick={() => document.querySelector<HTMLTextAreaElement>('.flova-home-input')?.focus()}
-            className="flex min-h-[180px] items-center justify-center rounded-3xl border border-dashed border-white/28 bg-white/[.025] text-white/60 transition hover:border-white/45 hover:bg-white/[.05]"
+            onClick={() => document.querySelector<HTMLTextAreaElement>('.flova-home-input textarea')?.focus()}
+            className="flex min-h-[190px] items-center justify-center rounded-[32px] border border-dashed border-black/18 bg-white/52 text-black/42 transition hover:border-black/30 hover:bg-white"
           >
-            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/35 text-4xl">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-black/18 text-4xl">
               +
             </span>
           </button>
@@ -291,18 +285,18 @@ const ProjectLobby: React.FC = () => {
               key={project.id}
               loading={loadingProjects}
               onClick={() => navigate(`/projects/${project.id}`)}
-              className="flova-project-card min-h-[180px] cursor-pointer overflow-hidden rounded-3xl border-white/10 bg-[#111]"
+              className="flova-project-card min-h-[190px] cursor-pointer overflow-hidden rounded-[32px] border-black/5 bg-white"
               bodyStyle={{ padding: 0 }}
             >
-              <div className="h-[108px] bg-[radial-gradient(circle_at_28%_30%,rgba(255,255,255,.22),transparent_22%),linear-gradient(135deg,rgba(20,184,166,.35),rgba(37,99,235,.20),rgba(249,115,22,.18))]" />
+              <div className="h-[108px] bg-[radial-gradient(circle_at_26%_26%,rgba(255,255,255,.85),transparent_21%),linear-gradient(135deg,rgba(0,122,255,.18),rgba(52,199,89,.14),rgba(255,149,0,.12))]" />
               <div className="p-5">
                 <div className="mb-2 flex items-center gap-2">
-                  <Tag color="green" className="mr-0 border-0 bg-[#203c22] text-[#a7e68f]">
-                    {project.progress}% analyze
+                  <Tag className="mr-0 rounded-full border-0 bg-black/[.06] px-3 text-black/58">
+                    已分析 {project.progress}%
                   </Tag>
                 </div>
-                <div className="truncate text-lg font-semibold text-white">{project.name}</div>
-                <div className="mt-1 line-clamp-1 text-sm text-white/38">{project.description || 'Agent generated project'}</div>
+                <div className="truncate text-lg font-semibold text-[#1d1d1f]">{project.name}</div>
+                <div className="mt-1 line-clamp-1 text-sm text-black/42">{project.description || 'Agent 创建的项目'}</div>
               </div>
             </Card>
           ))}
