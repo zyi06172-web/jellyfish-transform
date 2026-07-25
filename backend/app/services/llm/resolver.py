@@ -190,14 +190,22 @@ def apply_thinking_params(
     model: Model,
     thinking: bool,
 ) -> None:
-    """按供应商与模型写入 thinking 参数，兼容火山 Seed 2.0 与 OpenAI-compatible 默认行为。"""
+    """按供应商与模型写入 thinking 参数，兼容 DeepSeek 与火山 Seed 文本模型。"""
     extra_body = dict(kwargs.get("extra_body") or {})
-    if _is_volcengine_seed_model(provider=provider, model=model):
+    if _uses_thinking_type_toggle(provider=provider, model=model):
         extra_body["thinking"] = {"type": "enabled" if thinking else "disabled"}
     elif not thinking:
         extra_body["enable_thinking"] = False
     if extra_body:
         kwargs["extra_body"] = extra_body
+
+
+def _uses_thinking_type_toggle(*, provider: Provider, model: Model) -> bool:
+    """识别使用 `thinking.type` 开关的文本模型，避免把通用参数误套给特定供应商。"""
+    return _is_volcengine_seed_model(provider=provider, model=model) or _is_deepseek_thinking_model(
+        provider=provider,
+        model=model,
+    )
 
 
 def _is_volcengine_seed_model(*, provider: Provider, model: Model) -> bool:
@@ -208,3 +216,14 @@ def _is_volcengine_seed_model(*, provider: Provider, model: Model) -> bool:
         return False
     normalized_name = (model.name or "").lower()
     return provider_key == "volcengine" and "seed" in normalized_name
+
+
+def _is_deepseek_thinking_model(*, provider: Provider, model: Model) -> bool:
+    """判断是否为 DeepSeek OpenAI-compatible 文本模型。"""
+    try:
+        provider_key = resolve_provider_key_from_name(provider.name)
+    except HTTPException:
+        return False
+    normalized_name = (model.name or "").lower()
+    normalized_base_url = (provider.base_url or "").lower()
+    return provider_key == "openai" and ("deepseek" in normalized_name or "deepseek" in normalized_base_url)

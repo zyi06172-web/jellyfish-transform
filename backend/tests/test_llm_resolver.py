@@ -18,6 +18,11 @@ from app.services.llm import (
     get_provider_by_model_or_id,
 )
 from app.services.llm.provider_resolver import resolve_effective_base_url
+from app.core.contracts.image_generation import ImageGenerationInput, ImageGenerationResult, ImageItem
+from app.core.contracts.provider import ProviderConfig
+from app.core.contracts.video_generation import VideoGenerationInput, VideoGenerationResult
+from app.core.tasks.image_generation_tasks import ImageGenerationTask
+from app.core.tasks.video_generation_tasks import VideoGenerationTask
 
 
 @pytest.mark.asyncio
@@ -244,6 +249,131 @@ async def test_build_default_text_llm_uses_volcengine_seed_thinking_shape(monkey
         assert "enable_thinking" not in nothinking_llm.kwargs["extra_body"]
 
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_build_default_text_llm_uses_deepseek_thinking_shape(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):  # noqa: ANN003, ANN204
+            self.kwargs = kwargs
+
+    fake_module = types.ModuleType("langchain_openai")
+    fake_module.ChatOpenAI = FakeChatOpenAI
+    monkeypatch.setitem(sys.modules, "langchain_openai", fake_module)
+
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    session_local = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_local() as db:
+        provider = Provider(id="p1", name="openai", base_url="https://api.deepseek.com/v1", api_key="k")
+        model = Model(
+            id="m_text",
+            name="deepseek-v4-pro-260425",
+            category=ModelCategoryKey.text,
+            provider_id="p1",
+        )
+        settings = ModelSettings(id=1, default_text_model_id="m_text")
+        db.add_all([provider, model, settings])
+        await db.commit()
+
+        thinking_llm = await build_default_text_llm(db, thinking=True)
+        nothinking_llm = await build_default_text_llm(db, thinking=False)
+
+        assert thinking_llm.kwargs["extra_body"]["thinking"] == {"type": "enabled"}
+        assert nothinking_llm.kwargs["extra_body"]["thinking"] == {"type": "disabled"}
+        assert "enable_thinking" not in thinking_llm.kwargs["extra_body"]
+        assert "enable_thinking" not in nothinking_llm.kwargs["extra_body"]
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_seedream_image_path_does_not_apply_text_thinking_params(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def _fail_if_text_thinking_path_is_used(*_args, **_kwargs) -> None:
+        calls.append("called")
+        raise AssertionError("image generation must not call text thinking resolver")
+
+    async def _fake_generate(*, cfg: ProviderConfig, inp: ImageGenerationInput, timeout_s: float):
+        assert cfg.provider == "volcengine"
+        assert inp.model == "doubao-seedream-5-0-pro-260628"
+        assert timeout_s == 10
+        return ImageGenerationResult(
+            provider="volcengine",
+            images=[ImageItem(url="https://example.test/image.png")],
+            status="succeeded",
+        )
+
+    monkeypatch.setattr("app.services.llm.resolver.apply_thinking_params", _fail_if_text_thinking_path_is_used)
+    monkeypatch.setattr("app.core.integrations.volcengine.images.VolcengineImageApiAdapter.generate", _fake_generate)
+
+    task = ImageGenerationTask(
+        provider_config=ProviderConfig(provider="volcengine", base_url="https://ark.example/api/v3", api_key="k"),
+        input_=ImageGenerationInput(
+            prompt="竖屏短剧角色图",
+            model="doubao-seedream-5-0-pro-260628",
+            target_ratio="9:16",
+            purpose="video_reference",
+        ),
+        timeout_s=10,
+    )
+
+    await task.run()
+
+    result = await task.get_result()
+    assert result is not None
+    assert result.images[0].url == "https://example.test/image.png"
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_seedance_video_path_does_not_apply_text_thinking_params(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def _fail_if_text_thinking_path_is_used(*_args, **_kwargs) -> None:
+        calls.append("called")
+        raise AssertionError("video generation must not call text thinking resolver")
+
+    async def _fake_create(*, cfg: ProviderConfig, input_: VideoGenerationInput, timeout_s: float):
+        assert cfg.provider == "volcengine"
+        assert input_.model == "doubao-seedance-2-0-260128"
+        assert timeout_s == 10
+        return "task-video-1"
+
+    async def _fake_get(*, cfg: ProviderConfig, task_id: str, timeout_s: float):
+        assert task_id == "task-video-1"
+        return {"status": "succeeded", "content": {"video_url": "https://example.test/video.mp4"}}
+
+    monkeypatch.setattr("app.services.llm.resolver.apply_thinking_params", _fail_if_text_thinking_path_is_used)
+    monkeypatch.setattr(
+        "app.core.integrations.volcengine.video.VolcengineVideoApiAdapter.create_contents_task",
+        _fake_create,
+    )
+    monkeypatch.setattr(
+        "app.core.integrations.volcengine.video.VolcengineVideoApiAdapter.get_contents_task",
+        _fake_get,
+    )
+
+    task = VideoGenerationTask(
+        provider_config=ProviderConfig(provider="volcengine", base_url="https://ark.example/api/v3", api_key="k"),
+        input_=VideoGenerationInput(
+            prompt="女主走进雨夜",
+            model="doubao-seedance-2-0-260128",
+            ratio="9:16",
+        ),
+        poll_interval_s=0,
+        timeout_s=10,
+    )
+
+    await task.run()
+
+    result = await task.get_result()
+    assert result is not None
+    assert result.url == "https://example.test/video.mp4"
+    assert calls == []
 
 
 def test_resolve_effective_base_url_prefers_category_specific_url() -> None:
