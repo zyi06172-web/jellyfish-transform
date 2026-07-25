@@ -33,6 +33,36 @@ _VOLCENGINE_DEFAULT = ImageModelCapability(
     ratio_size_profiles=_VOLCENGINE_RATIO_SIZE_PROFILES,
 )
 
+_SEEDREAM_5_PRO_RATIO_SIZE_PROFILES = {
+    "1:1": {"standard": "1024x1024", "high": "2048x2048"},
+    "4:3": {"standard": "1152x864", "high": "2368x1776"},
+    "3:4": {"standard": "864x1152", "high": "1776x2368"},
+    "16:9": {"standard": "1424x800", "high": "2816x1584"},
+    "9:16": {"standard": "800x1424", "high": "1584x2816"},
+    "3:2": {"standard": "1248x832", "high": "2496x1664"},
+    "2:3": {"standard": "832x1248", "high": "1664x2496"},
+    "21:9": {"standard": "1568x672", "high": "3136x1344"},
+}
+
+_SEEDREAM_5_PRO_CAPABILITY = ImageModelCapability(
+    supports_seed=True,
+    supports_watermark=True,
+    allowed_sizes={
+        size
+        for profiles in _SEEDREAM_5_PRO_RATIO_SIZE_PROFILES.values()
+        for size in profiles.values()
+    },
+    supported_ratios=set(_SEEDREAM_5_PRO_RATIO_SIZE_PROFILES.keys()),
+    default_resolution_profile="high",
+    ratio_size_profiles=_SEEDREAM_5_PRO_RATIO_SIZE_PROFILES,
+    min_n=1,
+    max_n=1,
+)
+
+_VOLCENGINE_BUILTIN_MODEL_OVERRIDES: dict[str, ImageModelCapability] = {
+    "doubao-seedream-5-0-pro": _SEEDREAM_5_PRO_CAPABILITY,
+}
+
 # key: 模型前缀（小写）
 _VOLCENGINE_MODEL_OVERRIDES: dict[str, ImageModelCapability] = {}
 
@@ -54,7 +84,8 @@ def _pick_override(model: str | None) -> ImageModelCapability | None:
     value = model.strip().lower()
     if not value:
         return None
-    for prefix, cap in sorted(_VOLCENGINE_MODEL_OVERRIDES.items(), key=lambda item: len(item[0]), reverse=True):
+    merged_overrides = {**_VOLCENGINE_BUILTIN_MODEL_OVERRIDES, **_VOLCENGINE_MODEL_OVERRIDES}
+    for prefix, cap in sorted(merged_overrides.items(), key=lambda item: len(item[0]), reverse=True):
         if value.startswith(prefix):
             return cap
     return None
