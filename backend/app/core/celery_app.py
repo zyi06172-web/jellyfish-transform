@@ -16,7 +16,7 @@ from app.core.db import reset_db_runtime
 celery_app = Celery(
     "jellyfish",
     broker=settings.celery_broker_url,
-    include=["app.tasks.execute_task"],
+    include=["app.tasks.execute_task", "app.tasks.agent_workflow"],
 )
 
 celery_app.conf.update(

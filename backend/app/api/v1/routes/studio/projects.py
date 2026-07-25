@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
 from app.models.studio import Project
-from app.models.types import ProjectStyle, ProjectVisualStyle
+from app.models.types import AgentSessionStage, ProjectStyle, ProjectVisualStyle
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, paginated_response, success_response
 from app.schemas.studio.agent_workspace import (
     AgentMessageRead,
@@ -42,6 +42,7 @@ from app.services.studio.agent.home_prompt_analysis import (
     create_home_project_from_prompt,
     run_home_prompt_analysis_task,
 )
+from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
 from app.services.studio.agent.db_repository import DbAgentRepository
 from app.services.studio.agent.types import AgentTurnCommand, AgentTurnInput
 from app.services.studio.agent.video_creation_agent import VideoCreationAgent
@@ -224,6 +225,13 @@ async def handle_project_agent_turn(
             idempotency_key=body.idempotency_key,
         )
     )
+    if body.input.type == "choice" and result.stage == AgentSessionStage.storyboard:
+        await db.commit()
+        enqueue_agent_auto_elements_chain(
+            project_id=project_id,
+            session_id=body.session_id,
+            idempotency_key=body.idempotency_key,
+        )
     return success_response(
         AgentTurnRead(
             revision=result.revision,

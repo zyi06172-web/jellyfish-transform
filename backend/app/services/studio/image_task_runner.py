@@ -250,6 +250,7 @@ async def create_image_task_and_link(
     resolution_profile: str | None = None,
     purpose: str = "generic",
     render_context: dict | None = None,
+    enqueue: bool = True,
 ) -> str:
     """创建图片生成任务，并建立任务关联。"""
     store = SqlAlchemyTaskStore(db)
@@ -301,9 +302,10 @@ async def create_image_task_and_link(
         await mark_shot_generating(db, shot_id=related_shot_id)
     await db.commit()
 
-    from app.tasks.execute_task import enqueue_task_execution
+    if enqueue:
+        from app.tasks.execute_task import enqueue_task_execution
 
-    enqueue_task_execution(task_record.id)
+        enqueue_task_execution(task_record.id)
     return task_record.id
 
 
