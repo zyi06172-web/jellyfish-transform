@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,10 +23,16 @@ from app.services.common import (
 )
 from app.schemas.studio.projects import (
     ProjectCreate,
+    ProjectFromPromptRead,
+    ProjectFromPromptRequest,
     ProjectRead,
     ProjectStyleOptionsRead,
     ProjectUpdate,
     StyleOption,
+)
+from app.services.studio.agent.home_prompt_analysis import (
+    create_home_project_from_prompt,
+    run_home_prompt_analysis_task,
 )
 
 router = APIRouter()
@@ -122,6 +128,36 @@ async def create_project(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     obj = await create_and_refresh(db, Project(**body.model_dump()))
     return created_response(ProjectRead.model_validate(obj))
+
+
+@router.post(
+    "/from-prompt",
+    response_model=ApiResponse[ProjectFromPromptRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="从首页提示词创建项目并启动剧情分析",
+)
+async def create_project_from_prompt(
+    body: ProjectFromPromptRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectFromPromptRead]:
+    created = await create_home_project_from_prompt(
+        db,
+        prompt=body.prompt,
+        skill_key=body.skill_key,
+        idempotency_key=body.idempotency_key,
+    )
+    await db.commit()
+    if created.status == "running":
+        background_tasks.add_task(run_home_prompt_analysis_task, created.action_id)
+    return created_response(
+        ProjectFromPromptRead(
+            id=created.project_id,
+            project_id=created.project_id,
+            session_id=created.session_id,
+            status=created.status,
+        )
+    )
 
 
 @router.get(

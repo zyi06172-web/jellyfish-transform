@@ -2,11 +2,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ApiResponse_ChapterCandidateAutoConfirmResultRead_ } from '../models/ApiResponse_ChapterCandidateAutoConfirmResultRead_';
 import type { ApiResponse_ChapterRead_ } from '../models/ApiResponse_ChapterRead_';
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ChapterRead__ } from '../models/ApiResponse_PaginatedData_ChapterRead__';
 import type { ChapterCreate } from '../models/ChapterCreate';
 import type { ChapterUpdate } from '../models/ChapterUpdate';
+import type { ShotCandidateAutoConfirmRequest } from '../models/ShotCandidateAutoConfirmRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -141,6 +143,31 @@ export class StudioChaptersService {
             path: {
                 'chapter_id': chapterId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 章节级自动确认资产候选（串行去重，不调用 LLM）
+     * @returns ApiResponse_ChapterCandidateAutoConfirmResultRead_ Successful Response
+     * @throws ApiError
+     */
+    public static autoConfirmChapterCandidatesApiApiV1StudioChaptersChapterIdAutoConfirmCandidatesPost({
+        chapterId,
+        requestBody,
+    }: {
+        chapterId: string,
+        requestBody: ShotCandidateAutoConfirmRequest,
+    }): CancelablePromise<ApiResponse_ChapterCandidateAutoConfirmResultRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/chapters/{chapter_id}/auto-confirm-candidates',
+            path: {
+                'chapter_id': chapterId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

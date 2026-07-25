@@ -46,6 +46,19 @@ class ProjectRead(ProjectBase):
     id: str
 
 
+class ProjectFromPromptRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, description="首页输入的剧情大纲或视频需求")
+    skill_key: str = Field(..., description="首页选择的 Skill key")
+    idempotency_key: str = Field(..., min_length=8, max_length=128, description="客户端幂等键")
+
+
+class ProjectFromPromptRead(BaseModel):
+    id: str = Field(..., description="项目 ID")
+    project_id: str = Field(..., description="项目 ID")
+    session_id: str = Field(..., description="Agent session ID")
+    status: str = Field(..., description="分析动作状态")
+
+
 class ChapterBase(BaseModel):
     project_id: str = Field(..., description="所属项目 ID")
     index: int = Field(..., description="章节序号（项目内唯一）")

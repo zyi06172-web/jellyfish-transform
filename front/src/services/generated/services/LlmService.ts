@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { ApiResponse_ImageGenerationOptionsRead_ } from '../models/ApiResponse_ImageGenerationOptionsRead_';
 import type { ApiResponse_list_ProviderSupportedRead__ } from '../models/ApiResponse_list_ProviderSupportedRead__';
+import type { ApiResponse_LlmDiagnosticRead_ } from '../models/ApiResponse_LlmDiagnosticRead_';
 import type { ApiResponse_ModelRead_ } from '../models/ApiResponse_ModelRead_';
 import type { ApiResponse_ModelSettingsRead_ } from '../models/ApiResponse_ModelSettingsRead_';
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
@@ -203,6 +204,27 @@ export class LlmService {
         });
     }
     /**
+     * 真实测试供应商连接
+     * @returns ApiResponse_LlmDiagnosticRead_ Successful Response
+     * @throws ApiError
+     */
+    public static diagnoseProviderApiV1LlmProvidersProviderIdDiagnosePost({
+        providerId,
+    }: {
+        providerId: string,
+    }): CancelablePromise<ApiResponse_LlmDiagnosticRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/llm/providers/{provider_id}/diagnose',
+            path: {
+                'provider_id': providerId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * 列出模型（分页）
      * @returns ApiResponse_PaginatedData_ModelRead__ Successful Response
      * @throws ApiError
@@ -341,6 +363,27 @@ export class LlmService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/llm/models/{model_id}',
+            path: {
+                'model_id': modelId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 真实测试模型可用性
+     * @returns ApiResponse_LlmDiagnosticRead_ Successful Response
+     * @throws ApiError
+     */
+    public static diagnoseModelApiV1LlmModelsModelIdDiagnosePost({
+        modelId,
+    }: {
+        modelId: string,
+    }): CancelablePromise<ApiResponse_LlmDiagnosticRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/llm/models/{model_id}/diagnose',
             path: {
                 'model_id': modelId,
             },

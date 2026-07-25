@@ -9,12 +9,14 @@ import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ShotLinkedAssetItem__ } from '../models/ApiResponse_PaginatedData_ShotLinkedAssetItem__';
 import type { ApiResponse_PaginatedData_ShotRead__ } from '../models/ApiResponse_PaginatedData_ShotRead__';
 import type { ApiResponse_ShotAssetsOverviewRead_ } from '../models/ApiResponse_ShotAssetsOverviewRead_';
+import type { ApiResponse_ShotCandidateAutoConfirmResultRead_ } from '../models/ApiResponse_ShotCandidateAutoConfirmResultRead_';
 import type { ApiResponse_ShotPreparationMutationResultRead_ } from '../models/ApiResponse_ShotPreparationMutationResultRead_';
 import type { ApiResponse_ShotPreparationStateRead_ } from '../models/ApiResponse_ShotPreparationStateRead_';
 import type { ApiResponse_ShotRead_ } from '../models/ApiResponse_ShotRead_';
 import type { ApiResponse_ShotVideoPromptPreviewRead_ } from '../models/ApiResponse_ShotVideoPromptPreviewRead_';
 import type { ApiResponse_ShotVideoReadinessRead_ } from '../models/ApiResponse_ShotVideoReadinessRead_';
 import type { ApiResponse_StudioScriptExtractionDraft_ } from '../models/ApiResponse_StudioScriptExtractionDraft_';
+import type { ShotCandidateAutoConfirmRequest } from '../models/ShotCandidateAutoConfirmRequest';
 import type { ShotCreate } from '../models/ShotCreate';
 import type { ShotExtractedCandidateLinkRequest } from '../models/ShotExtractedCandidateLinkRequest';
 import type { ShotExtractedDialogueCandidateAcceptRequest } from '../models/ShotExtractedDialogueCandidateAcceptRequest';
@@ -314,6 +316,31 @@ export class StudioShotsService {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/v1/studio/shots/{shot_id}/skip-extraction',
+            path: {
+                'shot_id': shotId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 自动确认镜头资产候选（L1/L2，不调用 LLM）
+     * @returns ApiResponse_ShotCandidateAutoConfirmResultRead_ Successful Response
+     * @throws ApiError
+     */
+    public static autoConfirmShotCandidatesApiApiV1StudioShotsShotIdAutoConfirmCandidatesPost({
+        shotId,
+        requestBody,
+    }: {
+        shotId: string,
+        requestBody: ShotCandidateAutoConfirmRequest,
+    }): CancelablePromise<ApiResponse_ShotCandidateAutoConfirmResultRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/shots/{shot_id}/auto-confirm-candidates',
             path: {
                 'shot_id': shotId,
             },

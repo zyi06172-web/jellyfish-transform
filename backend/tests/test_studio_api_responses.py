@@ -18,6 +18,7 @@ from app.models.studio import (
     Shot,
     ShotStatus,
 )
+from app.services.studio.agent.home_prompt_analysis import HomePromptProjectCreated
 
 
 class _FakeStudioDB:
@@ -50,6 +51,9 @@ class _FakeStudioDB:
         raise TypeError(f"Unsupported object type: {type(obj)!r}")
 
     async def flush(self) -> None:
+        return None
+
+    async def commit(self) -> None:
         return None
 
     async def refresh(self, obj: object) -> None:
@@ -190,6 +194,56 @@ def test_project_style_options_returns_grouped_choices(client: TestClient) -> No
     assert "动漫" in body["data"]["styles_by_visual_style"]
     assert "video_ratios" not in body["data"]
     assert "default_video_ratio" not in body["data"]
+
+
+def test_create_project_from_prompt_returns_created_envelope_and_schedules_background(
+    client: TestClient,
+    monkeypatch,
+) -> None:
+    db = _FakeStudioDB()
+    scheduled: list[str] = []
+
+    async def _fake_create_home_project_from_prompt(_db, *, prompt: str, skill_key: str, idempotency_key: str):
+        assert prompt == "女主被迫签下一年婚姻协议，婚礼当晚发现男主身份反转"
+        assert skill_key == "short_drama"
+        assert idempotency_key == "idem-home-001"
+        return HomePromptProjectCreated(
+            project_id="proj-home",
+            session_id="agent-session-home",
+            action_id="agent-action-home",
+            status="running",
+        )
+
+    async def _fake_run_home_prompt_analysis_task(action_id: str) -> None:
+        scheduled.append(action_id)
+
+    from app.api.v1.routes.studio import projects as project_routes
+
+    monkeypatch.setattr(project_routes, "create_home_project_from_prompt", _fake_create_home_project_from_prompt)
+    monkeypatch.setattr(project_routes, "run_home_prompt_analysis_task", _fake_run_home_prompt_analysis_task)
+    app.dependency_overrides[get_db] = _override_db(db)
+    try:
+        response = client.post(
+            "/api/v1/studio/projects/from-prompt",
+            json={
+                "prompt": "女主被迫签下一年婚姻协议，婚礼当晚发现男主身份反转",
+                "skill_key": "short_drama",
+                "idempotency_key": "idem-home-001",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["code"] == 201
+    assert body["data"] == {
+        "id": "proj-home",
+        "project_id": "proj-home",
+        "session_id": "agent-session-home",
+        "status": "running",
+    }
+    assert scheduled == ["agent-action-home"]
 
 
 def test_create_project_rejects_invalid_style_combo(client: TestClient) -> None:

@@ -11,8 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { StudioProjectsService } from '../../../services/generated'
 import {
   HOME_SKILL_CARDS,
-  createHomeProjectId,
-  prepareHomeProjectCreationDraft,
+  createHomePromptIdempotencyKey,
   toHomeProjectCard,
   type HomeProjectCard,
   type SkillMode,
@@ -63,21 +62,28 @@ const ProjectLobby: React.FC = () => {
     }
     setCreating(true)
     try {
-      const draft = prepareHomeProjectCreationDraft({
-        id: createHomeProjectId(),
-        prompt: content,
-        model,
-        skill: selectedSkillInfo,
-      })
-      const res = await StudioProjectsService.createProjectApiV1StudioProjectsPost({
-        requestBody: draft.requestBody,
+      const res = await StudioProjectsService.createProjectFromPromptApiV1StudioProjectsFromPromptPost({
+        requestBody: {
+          prompt: content,
+          skill_key: selectedSkillInfo.key,
+          idempotency_key: createHomePromptIdempotencyKey(),
+        },
       })
       const created = res.data
       if (!created) throw new Error('empty project')
-      message.success(`已创建项目：${created.name}`)
-      setProjects((prev) => [toHomeProjectCard(created), ...prev])
+      message.success('已创建项目，正在分析剧情…')
+      setProjects((prev) => [
+        {
+          id: created.project_id,
+          name: '正在分析剧情…',
+          description: content,
+          updatedAt: new Date().toLocaleString(),
+          progress: 2,
+        },
+        ...prev,
+      ])
       setPrompt('')
-      navigate(`/projects/${created.id}`)
+      navigate(`/projects/${created.project_id}`)
     } catch {
       message.error('项目创建失败，请检查后端服务')
     } finally {

@@ -4,9 +4,11 @@
 /* eslint-disable */
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
+import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
 import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
 import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
 import type { ProjectCreate } from '../models/ProjectCreate';
+import type { ProjectFromPromptRequest } from '../models/ProjectFromPromptRequest';
 import type { ProjectUpdate } from '../models/ProjectUpdate';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -78,6 +80,26 @@ export class StudioProjectsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/studio/projects',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 从首页提示词创建项目并启动剧情分析
+     * @returns ApiResponse_ProjectFromPromptRead_ Successful Response
+     * @throws ApiError
+     */
+    public static createProjectFromPromptApiV1StudioProjectsFromPromptPost({
+        requestBody,
+    }: {
+        requestBody: ProjectFromPromptRequest,
+    }): CancelablePromise<ApiResponse_ProjectFromPromptRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/from-prompt',
             body: requestBody,
             mediaType: 'application/json',
             errors: {

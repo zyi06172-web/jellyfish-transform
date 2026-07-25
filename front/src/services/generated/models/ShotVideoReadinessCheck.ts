@@ -15,6 +15,10 @@ export type ShotVideoReadinessCheck = {
      */
     ok: boolean;
     /**
+     * 三态诊断：ok/warning/error
+     */
+    status?: 'ok' | 'warning' | 'error';
+    /**
      * 面向前端展示的说明
      */
     message: string;
