@@ -37,6 +37,13 @@ type AgentNote = {
   role: 'user' | 'assistant'
   text: string
 }
+type KeyElement = {
+  name: string
+  kind: string
+  tone: string
+  desc: string
+  audio: string
+}
 
 const workspacePanelClass =
   'flex min-h-0 flex-col overflow-hidden rounded-[32px] border border-black/5 bg-white/72 shadow-sm backdrop-blur-2xl'
@@ -157,22 +164,22 @@ function extractStory(description?: string | null) {
   return (parts[1] ?? text).trim() || '用户还没有写入剧情大纲，创作助理会先等待新的创作指令。'
 }
 
-/** 生成三栏工作台里展示用的关键元素，第一版先基于短剧常见结构模拟。 */
-function buildKeyElements(story: string) {
+/** 生成三栏工作台里展示用的关键元素，未接生成接口前先从剧情关键词推断角色组。 */
+function buildKeyElements(story: string): KeyElement[] {
   const isDrama = /婚|总裁|复仇|妹妹|医生|孩子|离婚|豪门|女主|男主/.test(story)
   if (isDrama) {
     return [
-      { name: '女主角 · 苏眠', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '白裙、受伤妆、压抑但倔强' },
-      { name: '男主角 · 傅寒舟', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '高级黑西装、冷峻表情' },
-      { name: '反派妹妹 · 苏婉', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '礼服、虚伪笑容、反派气质' },
-      { name: '医生', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '白衣、眼镜、专业表情' },
+      { name: '主人公', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '核心角色参考图', audio: '女主音色锚点' },
+      { name: '对手角色', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '冲突人物参考图', audio: '男主/反派音色锚点' },
+      { name: '配角', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '医生、亲属或证人参考图', audio: '配角音色锚点' },
+      { name: '主场景', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '主要空间与氛围', audio: '环境声锚点' },
     ]
   }
   return [
-    { name: '主人公', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '核心角色参考图' },
-    { name: '对手角色', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '冲突人物参考图' },
-    { name: '主场景', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '主要空间与氛围' },
-    { name: '关键道具', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '推动剧情的道具' },
+    { name: '主人公', kind: '图片', tone: 'from-[#f7d7d7] to-[#f5f5f7]', desc: '核心角色参考图', audio: '主角音色锚点' },
+    { name: '对手角色', kind: '图片', tone: 'from-[#dbeafe] to-[#f5f5f7]', desc: '冲突人物参考图', audio: '对手音色锚点' },
+    { name: '主场景', kind: '图片', tone: 'from-[#ede9fe] to-[#f5f5f7]', desc: '主要空间与氛围', audio: '环境声锚点' },
+    { name: '关键道具', kind: '图片', tone: 'from-[#ccfbf1] to-[#f5f5f7]', desc: '推动剧情的道具', audio: '道具音效锚点' },
   ]
 }
 
@@ -183,6 +190,29 @@ function buildStoryboardRows(activeStepIndex: number) {
     const status = index < activeStepIndex ? '已确认' : index === activeStepIndex ? '等待确认' : '未开始'
     return { ...item, status }
   })
+}
+
+/** 根据剧情给助理生成第一段回应，让工作台不像只会机械推进的按钮流。 */
+function buildAgentOpening(story: string) {
+  const compactStory = story.replace(/\s+/g, ' ').trim()
+  const hook =
+    compactStory.length > 36 ? `${compactStory.slice(0, 36)}...` : compactStory || '新的短剧创意'
+  const genre = /总裁|豪门|离婚|婚|复仇/.test(story)
+    ? '都市情感短剧'
+    : /广告|产品|品牌/.test(story)
+      ? '商业视频'
+      : '视频故事'
+  const conflict = /霸总|总裁/.test(story)
+    ? '权力关系和情感反差'
+    : /复仇|背叛|离婚/.test(story)
+      ? '背叛后的反击与身份翻转'
+      : '人物目标与阻碍之间的冲突'
+  return {
+    hook,
+    genre,
+    conflict,
+    summary: `我先把它理解成「${genre}」：${hook}。核心看点是${conflict}。我不会马上生成素材，会先按脚本、规格、故事板和关键元素逐步确认。`,
+  }
 }
 
 /** 三栏项目工作台：把故事板、预览和互动式创作助理放在同一制作画布中。 */
@@ -200,6 +230,8 @@ const ProjectWorkbench: React.FC = () => {
   const activeStepIndex = steps.indexOf(activeStep)
   const activeStepCopy = stepCopy[activeStep]
   const storyboardRows = useMemo(() => buildStoryboardRows(activeStepIndex), [activeStepIndex])
+  const agentOpening = useMemo(() => buildAgentOpening(story), [story])
+  const showFlowIntro = activeStepIndex < 4
 
   /** 推进右侧问题卡步骤，让用户按格式、角色、音频和动画顺序确认。 */
   const advanceStep = (option: WorkflowOption) => {
@@ -209,7 +241,7 @@ const ProjectWorkbench: React.FC = () => {
       { role: 'user', text: option.label },
       {
         role: 'assistant',
-        text: `已记录：${option.description}。下一步：${stepCopy[next].title}。`,
+        text: `已记录：${option.description}。我会把这个选择写入当前项目记忆，下一步进入「${stepCopy[next].title}」。`,
       },
     ])
     setActiveStep(next)
@@ -249,92 +281,100 @@ const ProjectWorkbench: React.FC = () => {
   }
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[340px_minmax(380px,1fr)_480px] gap-4 overflow-hidden bg-[#f6f7f9] p-4 text-[#1d1d1f]">
+    <div className="grid h-full min-h-0 grid-cols-[minmax(300px,0.8fr)_minmax(360px,1fr)_minmax(520px,1.55fr)] gap-3 overflow-hidden bg-[#f6f7f9] p-3 text-[#1d1d1f]">
       <aside className={workspacePanelClass}>
         <div className="flex h-16 items-center justify-between border-b border-black/5 px-5">
           <div className="flex items-center gap-3 text-xl font-semibold">
             <DownOutlined className="text-xs text-black/35" />
-            故事板
+            视频微调
           </div>
           <EllipsisOutlined className="text-xl text-black/40" />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <section className="border-b border-black/5 p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm font-semibold text-black/42">制作流程</div>
-              <Tag className="mr-0 rounded-full border-0 bg-black/[.06] text-black/50">
-                {Math.round(((activeStepIndex + 1) / steps.length) * 100)}%
-              </Tag>
-            </div>
-            <div className="space-y-2">
-              {storyboardRows.map((row, index) => (
-                <button
-                  key={row.key}
-                  type="button"
-                  onClick={() => setActiveStep(row.key)}
-                  className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                    row.key === activeStep
-                      ? 'border-black/10 bg-[#1d1d1f] text-white'
-                      : 'border-black/5 bg-white/70 text-[#1d1d1f] hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{index + 1}. {row.title}</span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${
-                      row.key === activeStep ? 'bg-white/14 text-white/72' : 'bg-black/[.045] text-black/38'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </div>
-                  <div className={`mt-1 line-clamp-1 text-xs ${row.key === activeStep ? 'text-white/58' : 'text-black/36'}`}>
-                    依赖：{row.dependency}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-          <section className="border-b border-black/5 p-5">
-            <div className="mb-4 flex items-center gap-3 text-xl font-semibold">
-              <DownOutlined className="text-xs text-black/35" />
-              关键元素
-            </div>
-            <div className="space-y-5">
-              {keyElements.map((element) => (
-                <div key={element.name}>
-                  <div className="mb-3 flex items-center gap-2 text-base font-semibold text-black/58">
-                    <DownOutlined className="text-xs" />
-                    {element.name}
-                  </div>
-                  <div className="ml-8 flex items-end gap-2">
-                    <div className="flex h-[72px] w-[126px] items-center rounded-[22px] bg-black/[.045] px-4 text-sm text-black/42">
-                      <AudioOutlined className="mr-2" /> 音色锚点
-                    </div>
-                    <div className={`h-[96px] w-[68px] rounded-[22px] bg-gradient-to-br ${element.tone} shadow-inner`} />
-                    <button className="h-9 w-9 rounded-2xl border border-dashed border-black/18 text-xl text-black/38">+</button>
-                  </div>
-                  <div className="ml-8 mt-2 flex gap-2">
-                    <Tag className="mr-0 rounded-full border-0 bg-black/[.06] text-black/54">
-                      {element.kind}
-                    </Tag>
-                    <span className="truncate text-xs text-black/38">{element.desc}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-          <section className="p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-xl font-semibold">
-                <DownOutlined className="text-xs text-black/35" />
-                未分类素材
+          {showFlowIntro ? (
+            <section className="p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-sm font-semibold text-black/42">流程介绍</div>
+                <Tag className="mr-0 rounded-full border-0 bg-black/[.06] text-black/50">
+                  {Math.round(((activeStepIndex + 1) / steps.length) * 100)}%
+                </Tag>
               </div>
-              <span className="text-sm text-black/35">全部</span>
-            </div>
-            <div className="flex h-[220px] flex-col items-center justify-center rounded-[26px] border border-black/5 bg-black/[.025] text-center text-black/28">
-              <PlusOutlined className="mb-4 text-2xl" />
-              尚未放入故事板的生成素材会显示在这里。
-            </div>
-          </section>
+              <div className="mb-5 rounded-[26px] border border-dashed border-black/8 bg-white/52 p-5 text-sm leading-relaxed text-black/42">
+                这里后面会变成角色图、音色锚点、场景和道具的微调区。前四轮先只展示流程，让用户跟着助理确认剧情、规格和故事板。
+              </div>
+              <div className="space-y-2">
+                {storyboardRows.slice(0, 4).map((row, index) => (
+                  <button
+                    key={row.key}
+                    type="button"
+                    onClick={() => setActiveStep(row.key)}
+                    className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                      row.key === activeStep
+                        ? 'border-black/10 bg-[#1d1d1f] text-white'
+                        : 'border-black/5 bg-white/70 text-[#1d1d1f] hover:bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold">{index + 1}. {row.title}</span>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${
+                        row.key === activeStep ? 'bg-white/14 text-white/72' : 'bg-black/[.045] text-black/38'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </div>
+                    <div className={`mt-1 line-clamp-1 text-xs ${row.key === activeStep ? 'text-white/58' : 'text-black/36'}`}>
+                      依赖：{row.dependency}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <>
+              <section className="border-b border-black/5 p-5">
+                <div className="mb-4 flex items-center gap-3 text-xl font-semibold">
+                  <DownOutlined className="text-xs text-black/35" />
+                  关键元素
+                </div>
+                <div className="space-y-8">
+                  {keyElements.slice(0, 3).map((element) => (
+                    <div key={element.name}>
+                      <div className="mb-4 flex items-center gap-2 text-xl font-semibold text-black/78">
+                        <DownOutlined className="text-sm" />
+                        {element.name}
+                      </div>
+                      <div className="ml-8 flex items-center gap-3">
+                        <div className="flex h-[74px] min-w-[126px] items-center justify-center rounded-[24px] bg-black/[.055] px-4 text-sm font-semibold text-black/60">
+                          <AudioOutlined className="mr-2 text-lg" /> {element.audio}
+                        </div>
+                        <div className={`h-[104px] w-[74px] rounded-[24px] bg-gradient-to-br ${element.tone} shadow-inner`} />
+                        <button className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-black/20 text-2xl text-black">+</button>
+                      </div>
+                      <div className="ml-8 mt-3 flex gap-2">
+                        <Tag className="mr-0 rounded-full border-0 bg-black/[.06] text-black/54">
+                          {element.kind}
+                        </Tag>
+                        <span className="truncate text-sm text-black/58">{element.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-xl font-semibold">
+                    <DownOutlined className="text-xs text-black/35" />
+                    未分类素材
+                  </div>
+                  <span className="text-sm text-black/35">全部</span>
+                </div>
+                <div className="flex h-[180px] flex-col items-center justify-center rounded-[26px] border border-black/5 bg-black/[.025] text-center text-black/28">
+                  <PlusOutlined className="mb-4 text-2xl" />
+                  还没放入故事板的生成素材会显示在这里。
+                </div>
+              </section>
+            </>
+          )}
         </div>
         <div className="flex h-16 items-center justify-center gap-4 border-t border-black/5 px-5">
           <Progress
@@ -356,15 +396,32 @@ const ProjectWorkbench: React.FC = () => {
             <Tag className="rounded-full border-0 bg-black/[.06] px-4 py-1 text-black/48">不消耗额度</Tag>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <div className="grid gap-4 lg:grid-cols-[minmax(260px,420px)_1fr]">
-            <div className="rounded-[34px] bg-[#f5f5f7] p-4 shadow-inner">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          <div className="mx-auto flex w-full max-w-[620px] flex-col gap-4">
+            <div className="rounded-[28px] border border-black/5 bg-white/74 p-5 shadow-sm">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-black/42">
+                <FileTextOutlined /> 当前阶段
+              </div>
+              <div className="text-2xl font-semibold">{activeStepCopy.title}</div>
+              <p className="mt-3 text-sm leading-relaxed text-black/48">{activeStepCopy.body}</p>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-black/[.035] p-3">
+                  <div className="text-xs text-black/35">依赖</div>
+                  <div className="mt-1 text-sm font-semibold text-black/60">{activeStepCopy.dependency}</div>
+                </div>
+                <div className="rounded-2xl bg-black/[.035] p-3">
+                  <div className="text-xs text-black/35">输出</div>
+                  <div className="mt-1 text-sm font-semibold text-black/60">{activeStepCopy.output}</div>
+                </div>
+              </div>
+            </div>
+            <div className="mx-auto w-full max-w-[430px] rounded-[34px] bg-[#f5f5f7] p-4 shadow-inner">
               <div className="relative aspect-[9/16] overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_32%_36%,rgba(255,255,255,.82),transparent_18%),linear-gradient(140deg,#dbeafe,#e5e7eb_42%,#fdf2f8)]">
                 <div className="absolute left-0 top-0 h-full w-[49%] border-r border-white/70 bg-[radial-gradient(circle_at_52%_27%,rgba(255,230,214,.84),transparent_18%),linear-gradient(180deg,rgba(148,163,184,.30),rgba(255,255,255,.38))]" />
                 <div className="absolute right-[10%] top-[16%] h-[72%] w-[28%] rounded-t-full bg-[linear-gradient(180deg,rgba(255,255,255,.94),rgba(226,232,240,.68))]" />
-                <div className="absolute bottom-8 left-6 max-w-[240px] rounded-[22px] bg-white/62 p-4 shadow-lg backdrop-blur-2xl">
+                <div className="absolute bottom-8 left-6 right-6 rounded-[22px] bg-white/70 p-4 shadow-lg backdrop-blur-2xl">
                   <div className="text-sm text-black/38">剧情总结</div>
-                  <div className="mt-2 line-clamp-6 text-lg leading-relaxed text-[#1d1d1f]">
+                  <div className="mt-2 line-clamp-5 text-lg leading-relaxed text-[#1d1d1f]">
                     {story}
                   </div>
                 </div>
@@ -376,37 +433,18 @@ const ProjectWorkbench: React.FC = () => {
                 </button>
               </div>
             </div>
-            <div className="space-y-4">
-              <div className="rounded-[28px] border border-black/5 bg-white/74 p-5 shadow-sm">
-                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-black/42">
-                  <FileTextOutlined /> 当前阶段
-                </div>
-                <div className="text-2xl font-semibold">{activeStepCopy.title}</div>
-                <p className="mt-3 text-sm leading-relaxed text-black/48">{activeStepCopy.body}</p>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl bg-black/[.035] p-3">
-                    <div className="text-xs text-black/35">依赖</div>
-                    <div className="mt-1 text-sm font-semibold text-black/60">{activeStepCopy.dependency}</div>
-                  </div>
-                  <div className="rounded-2xl bg-black/[.035] p-3">
-                    <div className="text-xs text-black/35">输出</div>
-                    <div className="mt-1 text-sm font-semibold text-black/60">{activeStepCopy.output}</div>
+            <div className="grid grid-cols-3 gap-3">
+              {['脚本', '元素', '音频'].map((label, index) => (
+                <div key={label} className="rounded-[22px] border border-black/5 bg-white/66 p-3 shadow-sm">
+                  <div className={`mb-3 h-16 rounded-[18px] bg-gradient-to-br ${
+                    index === 0 ? 'from-[#fff7ed] to-[#e0f2fe]' : index === 1 ? 'from-[#fce7f3] to-[#eef2ff]' : 'from-[#ecfeff] to-[#f7fee7]'
+                  }`} />
+                  <div className="text-sm font-semibold">{label}</div>
+                  <div className="mt-1 text-xs text-black/38">
+                    {index <= Math.min(activeStepIndex, 2) ? '已进入流程' : '等待确认'}
                   </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {['脚本', '元素', '音频'].map((label, index) => (
-                  <div key={label} className="rounded-[22px] border border-black/5 bg-white/66 p-3 shadow-sm">
-                    <div className={`mb-3 h-20 rounded-[18px] bg-gradient-to-br ${
-                      index === 0 ? 'from-[#fff7ed] to-[#e0f2fe]' : index === 1 ? 'from-[#fce7f3] to-[#eef2ff]' : 'from-[#ecfeff] to-[#f7fee7]'
-                    }`} />
-                    <div className="text-sm font-semibold">{label}</div>
-                    <div className="mt-1 text-xs text-black/38">
-                      {index <= Math.min(activeStepIndex, 2) ? '已进入流程' : '等待确认'}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -439,6 +477,18 @@ const ProjectWorkbench: React.FC = () => {
             <div className="flex items-start gap-3">
               <CheckOutlined className="mt-1 text-black/35" />
               <span>后续每个关键阶段都会暂停确认</span>
+            </div>
+          </div>
+          <div className="mb-6 rounded-[28px] border border-black/5 bg-black/[.035] p-5 text-base leading-relaxed text-black/62">
+            <div className="mb-2 text-xs font-semibold text-black/36">助理理解</div>
+            <p>{agentOpening.summary}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Tag className="mr-0 rounded-full border-0 bg-white/76 px-3 text-black/52">
+                {agentOpening.genre}
+              </Tag>
+              <Tag className="mr-0 rounded-full border-0 bg-white/76 px-3 text-black/52">
+                {agentOpening.conflict}
+              </Tag>
             </div>
           </div>
           <div className="my-8 h-px bg-black/6" />
@@ -523,7 +573,10 @@ const ProjectWorkbench: React.FC = () => {
               className="flova-chat-input"
               placeholder="输入你的修改意见，例如：女主不够好看，重新生成一个..."
               onPressEnter={(event) => {
-                if (event.metaKey || event.ctrlKey) submitUserFeedback()
+                if (!event.shiftKey) {
+                  event.preventDefault()
+                  submitUserFeedback()
+                }
               }}
             />
             <div className="mt-3 flex items-center gap-3">

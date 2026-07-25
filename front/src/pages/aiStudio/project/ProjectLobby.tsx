@@ -121,7 +121,8 @@ const ProjectLobby: React.FC = () => {
                 className="flova-home-input text-[17px]"
                 placeholder="写下剧情大纲、广告创意或长视频想法。创作助理会总结标题并创建项目..."
                 onPressEnter={(event) => {
-                  if ((event.metaKey || event.ctrlKey) && canCreate) {
+                  if (!event.shiftKey && canCreate) {
+                    event.preventDefault()
                     void handleCreateFromPrompt()
                   }
                 }}
