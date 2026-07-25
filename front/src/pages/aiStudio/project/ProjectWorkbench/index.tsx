@@ -19,7 +19,10 @@ import { useChapters, useProject } from './hooks/useProjectData'
 import { getChapterStudioPath } from './routes'
 
 type AgentStep = 'script' | 'spec' | 'storyboard' | 'elements' | 'audio' | 'shots' | 'mix' | 'export'
+type WorkflowOptionEffect = 'confirm_and_advance' | 'stay_and_collect_feedback'
 type WorkflowOption = {
+  id: string
+  effect: WorkflowOptionEffect
   label: string
   description: string
 }
@@ -58,8 +61,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '输入剧情或上传脚本',
     output: '剧情总结、人物列表、场景线索',
     options: [
-      { label: '确认剧情，继续制作', description: '沿用当前剧情作为唯一依据，进入视频规格确认。' },
-      { label: '需要先改剧情', description: '暂停后续步骤，把修改意见写进右下角对话框。' },
+      { id: 'confirm-script', effect: 'confirm_and_advance', label: '确认剧情，继续制作', description: '沿用当前剧情作为唯一依据，进入视频规格确认。' },
+      { id: 'revise-script', effect: 'stay_and_collect_feedback', label: '需要先改剧情', description: '暂停后续步骤，把修改意见写进右下角对话框。' },
     ],
   },
   spec: {
@@ -71,8 +74,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '剧情确认',
     output: '成片规格文档草稿',
     options: [
-      { label: '竖屏 9:16 · 1 到 2 分钟 · 写实短剧', description: '短剧默认方案，优先角色表演和反转节奏。' },
-      { label: '横屏 16:9 · 3 分钟以上 · 电影质感', description: '更适合长视频、广告片或品牌故事。' },
+      { id: 'confirm-vertical-short-drama', effect: 'confirm_and_advance', label: '竖屏 9:16 · 1 到 2 分钟 · 写实短剧', description: '短剧默认方案，优先角色表演和反转节奏。' },
+      { id: 'revise-spec-horizontal-film', effect: 'stay_and_collect_feedback', label: '横屏 16:9 · 3 分钟以上 · 电影质感', description: '更适合长视频、广告片或品牌故事。' },
     ],
   },
   storyboard: {
@@ -84,8 +87,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '成片规格确认',
     output: '关键元素、镜头列表、音频层',
     options: [
-      { label: '生成故事板', description: '进入左侧故事板，准备关键元素和镜头资产。' },
-      { label: '先看规格摘要', description: '暂停生成，先核对标题、比例、时长和风格。' },
+      { id: 'confirm-storyboard', effect: 'confirm_and_advance', label: '生成故事板', description: '进入左侧故事板，准备关键元素和镜头资产。' },
+      { id: 'review-spec-summary', effect: 'stay_and_collect_feedback', label: '先看规格摘要', description: '暂停生成，先核对标题、比例、时长和风格。' },
     ],
   },
   elements: {
@@ -97,8 +100,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '故事板完成',
     output: 'key_elements 与参考图',
     options: [
-      { label: '生成角色画像', description: '为主要角色、场景、服装和道具生成参考图。' },
-      { label: '我已有参考素材', description: '保留进度，等待上传或绑定已有资产。' },
+      { id: 'confirm-generate-elements', effect: 'confirm_and_advance', label: '生成角色画像', description: '为主要角色、场景、服装和道具生成参考图。' },
+      { id: 'provide-reference-assets', effect: 'stay_and_collect_feedback', label: '我已有参考素材', description: '保留进度，等待上传或绑定已有资产。' },
     ],
   },
   audio: {
@@ -110,8 +113,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '关键元素准备完成',
     output: 'key_element_audio',
     options: [
-      { label: '旁白模型生成音色', description: '消耗较少，适合先快速推进角色音频引用。' },
-      { label: 'Seedance 视频抽取音色', description: '消耗较多，但能保留角色说话状态的视频资产。' },
+      { id: 'confirm-narration-voice-anchor', effect: 'confirm_and_advance', label: '旁白模型生成音色', description: '消耗较少，适合先快速推进角色音频引用。' },
+      { id: 'revise-voice-anchor-path', effect: 'stay_and_collect_feedback', label: 'Seedance 视频抽取音色', description: '消耗较多，但能保留角色说话状态的视频资产。' },
     ],
   },
   shots: {
@@ -123,8 +126,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '关键元素与音色完成',
     output: '分镜视频草稿',
     options: [
-      { label: '生成当前镜头视频', description: '先生成首批镜头草稿，检查角色一致性。' },
-      { label: '先补关键帧', description: '先为每个镜头准备起始帧、结束帧和高潮帧。' },
+      { id: 'confirm-generate-shot-video', effect: 'confirm_and_advance', label: '生成当前镜头视频', description: '先生成首批镜头草稿，检查角色一致性。' },
+      { id: 'prepare-keyframes-first', effect: 'stay_and_collect_feedback', label: '先补关键帧', description: '先为每个镜头准备起始帧、结束帧和高潮帧。' },
     ],
   },
   mix: {
@@ -136,8 +139,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '镜头视频完成',
     output: 'BGM、对白、旁白层',
     options: [
-      { label: '生成音频层', description: '为当前故事板准备 BGM、对白和旁白。' },
-      { label: '暂时静音预览', description: '先看画面节奏，音频稍后生成。' },
+      { id: 'confirm-generate-audio-layers', effect: 'confirm_and_advance', label: '生成音频层', description: '为当前故事板准备 BGM、对白和旁白。' },
+      { id: 'silent-preview-first', effect: 'stay_and_collect_feedback', label: '暂时静音预览', description: '先看画面节奏，音频稍后生成。' },
     ],
   },
   export: {
@@ -149,8 +152,8 @@ const stepCopy: Record<AgentStep, WorkflowStep> = {
     dependency: '视频与音频层完成',
     output: '可导出的成片时间线',
     options: [
-      { label: '检查并导出', description: '汇总缺失项，准备最终剪辑与导出。' },
-      { label: '继续局部修改', description: '留在工作台，针对角色、镜头或音频继续调整。' },
+      { id: 'confirm-export-check', effect: 'confirm_and_advance', label: '检查并导出', description: '汇总缺失项，准备最终剪辑与导出。' },
+      { id: 'continue-local-revisions', effect: 'stay_and_collect_feedback', label: '继续局部修改', description: '留在工作台，针对角色、镜头或音频继续调整。' },
     ],
   },
 }
@@ -190,6 +193,21 @@ function buildStoryboardRows(activeStepIndex: number) {
     const status = index < activeStepIndex ? '已确认' : index === activeStepIndex ? '等待确认' : '未开始'
     return { ...item, status }
   })
+}
+
+/** 根据问题卡选项语义决定是否推进阶段，避免修改类选项误触发下一步。 */
+function resolveOptionTransition(activeStepIndex: number, option: WorkflowOption) {
+  if (option.effect === 'stay_and_collect_feedback') {
+    return {
+      nextStep: steps[activeStepIndex],
+      assistantText: `已记录：${option.description}。我会停在当前阶段，等待你在对话框补充修改意见。`,
+    }
+  }
+  const nextStep = steps[Math.min(activeStepIndex + 1, steps.length - 1)]
+  return {
+    nextStep,
+    assistantText: `已记录：${option.description}。下一步进入「${stepCopy[nextStep].title}」。`,
+  }
 }
 
 /** 根据剧情给助理生成第一段回应，让工作台不像只会机械推进的按钮流。 */
@@ -233,18 +251,18 @@ const ProjectWorkbench: React.FC = () => {
   const agentOpening = useMemo(() => buildAgentOpening(story), [story])
   const showFlowIntro = activeStepIndex < 4
 
-  /** 推进右侧问题卡步骤，让用户按格式、角色、音频和动画顺序确认。 */
-  const advanceStep = (option: WorkflowOption) => {
-    const next = steps[Math.min(activeStepIndex + 1, steps.length - 1)]
+  /** 执行右侧问题卡选项，仅确认类选项会推进流程。 */
+  const handleWorkflowOption = (option: WorkflowOption) => {
+    const transition = resolveOptionTransition(activeStepIndex, option)
     setAgentNotes((prev) => [
       ...prev,
       { role: 'user', text: option.label },
       {
         role: 'assistant',
-        text: `已记录：${option.description}。我会把这个选择写入当前项目记忆，下一步进入「${stepCopy[next].title}」。`,
+        text: transition.assistantText,
       },
     ])
-    setActiveStep(next)
+    setActiveStep(transition.nextStep)
   }
 
   /** 记录用户自由反馈，局部调整偏好先写入当前工作台的临时对话记录。 */
@@ -259,7 +277,7 @@ const ProjectWorkbench: React.FC = () => {
         text:
           text.includes('女主') || text.includes('不好看')
             ? '我会只重生成女主角参考图，并保持场景、音频和分镜进度不变。'
-            : '收到，我会把这个偏好写入当前项目记忆，并在后续生成中保持一致。',
+            : '收到，已记录在当前对话里，后续生成时我会参考这个偏好。',
       },
     ])
     setMessageText('')
@@ -472,7 +490,7 @@ const ProjectWorkbench: React.FC = () => {
             </div>
             <div className="flex items-start gap-3">
               <CheckOutlined className="mt-1 text-black/35" />
-              <span>剧情总结已写入项目记忆</span>
+              <span>已读取首页剧情输入</span>
             </div>
             <div className="flex items-start gap-3">
               <CheckOutlined className="mt-1 text-black/35" />
@@ -502,9 +520,9 @@ const ProjectWorkbench: React.FC = () => {
           <div className="mt-7 space-y-3">
             {activeStepCopy.options.map((option, index) => (
               <button
-                key={option.label}
+                key={option.id}
                 type="button"
-                onClick={() => advanceStep(option)}
+                onClick={() => handleWorkflowOption(option)}
                 className={`w-full rounded-[28px] border p-5 text-left leading-relaxed transition hover:-translate-y-0.5 ${
                   index === 0
                     ? 'border-black/5 bg-[#1d1d1f] text-white shadow-[0_24px_70px_rgba(0,0,0,.18)] hover:shadow-[0_30px_90px_rgba(0,0,0,.22)]'
