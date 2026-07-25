@@ -11,6 +11,14 @@ from app.dependencies import get_db
 from app.models.studio import Project
 from app.models.types import ProjectStyle, ProjectVisualStyle
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, paginated_response, success_response
+from app.schemas.studio.agent_workspace import (
+    AgentMessageRead,
+    AgentQuestionCardRead,
+    AgentQuestionOptionRead,
+    AgentTurnRead,
+    AgentTurnRequest,
+    AgentWorkspaceSnapshotRead,
+)
 from app.services.common import (
     create_and_refresh,
     delete_if_exists,
@@ -34,6 +42,9 @@ from app.services.studio.agent.home_prompt_analysis import (
     create_home_project_from_prompt,
     run_home_prompt_analysis_task,
 )
+from app.services.studio.agent.db_repository import DbAgentRepository
+from app.services.studio.agent.types import AgentTurnCommand, AgentTurnInput
+from app.services.studio.agent.video_creation_agent import VideoCreationAgent
 
 router = APIRouter()
 
@@ -161,6 +172,79 @@ async def create_project_from_prompt(
 
 
 @router.get(
+    "/{project_id}/workspace",
+    response_model=ApiResponse[AgentWorkspaceSnapshotRead],
+    summary="获取 Agent 工作台快照",
+)
+async def get_project_workspace(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[AgentWorkspaceSnapshotRead]:
+    await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    agent = VideoCreationAgent(repository=DbAgentRepository(db))
+    snapshot = await agent.get_workspace_snapshot(project_id)
+    return success_response(_snapshot_to_read(snapshot))
+
+
+@router.post(
+    "/{project_id}/agent/turns",
+    response_model=ApiResponse[AgentTurnRead],
+    summary="提交 Agent 对话 turn",
+)
+async def handle_project_agent_turn(
+    project_id: str,
+    body: AgentTurnRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[AgentTurnRead]:
+    await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    repository = DbAgentRepository(db, command_idempotency_key=body.idempotency_key)
+    if body.input.type == "text" and body.input.text.strip():
+        await repository.append_user_message(
+            session_id=body.session_id,
+            content=body.input.text.strip(),
+            payload={"idempotency_key": body.idempotency_key},
+        )
+    elif body.input.type == "choice":
+        await repository.append_user_message(
+            session_id=body.session_id,
+            content=body.input.choice_id,
+            payload={"choice_id": body.input.choice_id, "idempotency_key": body.idempotency_key},
+        )
+    agent = VideoCreationAgent(repository=repository)
+    result = await agent.handle_turn(
+        AgentTurnCommand(
+            project_id=project_id,
+            session_id=body.session_id,
+            expected_revision=body.expected_revision,
+            input=AgentTurnInput(
+                type=body.input.type,
+                text=body.input.text,
+                choice_id=body.input.choice_id,
+            ),
+            idempotency_key=body.idempotency_key,
+        )
+    )
+    return success_response(
+        AgentTurnRead(
+            revision=result.revision,
+            stage=result.stage.value,
+            assistant_message=_message_to_read(result.assistant_message),
+            question_card=_question_to_read(result.question_card),
+            actions=[
+                {
+                    "action_type": action.action_type.value,
+                    "target_type": action.target_type,
+                    "target_id": action.target_id,
+                    "input": action.input,
+                }
+                for action in result.actions
+            ],
+            workspace_patch=result.workspace_patch,
+        )
+    )
+
+
+@router.get(
     "/{project_id}",
     response_model=ApiResponse[ProjectRead],
     summary="获取项目",
@@ -208,3 +292,44 @@ async def delete_project(
 ) -> ApiResponse[None]:
     await delete_if_exists(db, Project, project_id)
     return empty_response()
+
+
+def _snapshot_to_read(snapshot) -> AgentWorkspaceSnapshotRead:  # noqa: ANN001
+    return AgentWorkspaceSnapshotRead(
+        project_id=snapshot.project_id,
+        session_id=snapshot.session_id,
+        stage=snapshot.stage.value,
+        status=snapshot.status.value,
+        revision=snapshot.revision,
+        confirmed_stages=[item.value for item in snapshot.confirmed_stages],
+        completed_stages=[item.value for item in snapshot.completed_stages],
+        question_card=_question_to_read(snapshot.question_card),
+        messages=[_message_to_read(item) for item in snapshot.messages],
+        artifacts=snapshot.artifacts,
+    )
+
+
+def _question_to_read(question) -> AgentQuestionCardRead | None:  # noqa: ANN001
+    if question is None:
+        return None
+    return AgentQuestionCardRead(
+        question=question.question,
+        options=[
+            AgentQuestionOptionRead(
+                id=option.id,
+                label=option.label,
+                effect=option.effect,
+                payload=option.payload,
+            )
+            for option in question.options
+        ],
+    )
+
+
+def _message_to_read(message) -> AgentMessageRead:  # noqa: ANN001
+    return AgentMessageRead(
+        role=message.role,
+        kind=message.kind.value if hasattr(message.kind, "value") else str(message.kind),
+        content=message.content,
+        payload=message.payload,
+    )

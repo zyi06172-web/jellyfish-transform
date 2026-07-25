@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AgentTurnRequest } from '../models/AgentTurnRequest';
+import type { ApiResponse_AgentTurnRead_ } from '../models/ApiResponse_AgentTurnRead_';
+import type { ApiResponse_AgentWorkspaceSnapshotRead_ } from '../models/ApiResponse_AgentWorkspaceSnapshotRead_';
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
 import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
@@ -100,6 +103,52 @@ export class StudioProjectsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/studio/projects/from-prompt',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取 Agent 工作台快照
+     * @returns ApiResponse_AgentWorkspaceSnapshotRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectWorkspaceApiV1StudioProjectsProjectIdWorkspaceGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_AgentWorkspaceSnapshotRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}/workspace',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 提交 Agent 对话 turn
+     * @returns ApiResponse_AgentTurnRead_ Successful Response
+     * @throws ApiError
+     */
+    public static handleProjectAgentTurnApiV1StudioProjectsProjectIdAgentTurnsPost({
+        projectId,
+        requestBody,
+    }: {
+        projectId: string,
+        requestBody: AgentTurnRequest,
+    }): CancelablePromise<ApiResponse_AgentTurnRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/{project_id}/agent/turns',
+            path: {
+                'project_id': projectId,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {

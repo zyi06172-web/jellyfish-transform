@@ -424,19 +424,19 @@ def _build_spec_question_options(spec: dict[str, Any]) -> list[dict[str, Any]]:
         {
             "id": "confirm_final_video_spec",
             "label": "确认规格",
-            "effect": "advance",
+            "effect": "confirm_and_advance",
             "payload": {"final_video_spec": spec},
         },
         {
             "id": "revise_final_video_spec",
             "label": "调整规格",
-            "effect": "clarify",
+            "effect": "stay_and_collect_feedback",
             "payload": {"target": "final_video_spec"},
         },
         {
             "id": "pause_before_storyboard",
             "label": "先暂停",
-            "effect": "hold",
+            "effect": "stay_and_collect_feedback",
             "payload": {"stage": AgentSessionStage.spec_review.value},
         },
     ]

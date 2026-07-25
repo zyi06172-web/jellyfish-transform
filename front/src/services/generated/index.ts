@@ -8,6 +8,15 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { ActionBeatPhaseRead } from './models/ActionBeatPhaseRead';
+export type { AgentMessageRead } from './models/AgentMessageRead';
+export type { AgentQuestionCardRead } from './models/AgentQuestionCardRead';
+export type { AgentQuestionOptionRead } from './models/AgentQuestionOptionRead';
+export type { AgentTurnInputRead } from './models/AgentTurnInputRead';
+export type { AgentTurnRead } from './models/AgentTurnRead';
+export type { AgentTurnRequest } from './models/AgentTurnRequest';
+export type { AgentWorkspaceSnapshotRead } from './models/AgentWorkspaceSnapshotRead';
+export type { ApiResponse_AgentTurnRead_ } from './models/ApiResponse_AgentTurnRead_';
+export type { ApiResponse_AgentWorkspaceSnapshotRead_ } from './models/ApiResponse_AgentWorkspaceSnapshotRead_';
 export type { ApiResponse_AsyncTaskCreateRead_ } from './models/ApiResponse_AsyncTaskCreateRead_';
 export type { ApiResponse_ChapterCandidateAutoConfirmResultRead_ } from './models/ApiResponse_ChapterCandidateAutoConfirmResultRead_';
 export type { ApiResponse_ChapterRead_ } from './models/ApiResponse_ChapterRead_';
