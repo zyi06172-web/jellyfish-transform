@@ -270,7 +270,7 @@ async def test_build_default_text_llm_uses_deepseek_thinking_shape(monkeypatch: 
         provider = Provider(id="p1", name="openai", base_url="https://api.deepseek.com/v1", api_key="k")
         model = Model(
             id="m_text",
-            name="deepseek-v4-pro-260425",
+            name="deepseek-v4-pro",
             category=ModelCategoryKey.text,
             provider_id="p1",
         )
