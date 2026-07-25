@@ -59,7 +59,7 @@ INSERT IGNORE INTO models (
 VALUES
   (
     'model-deepseek-v4-pro',
-    'deepseek-v4-pro-260425',
+    'deepseek-v4-pro',
     'text',
     'openai',
     JSON_OBJECT(),
