@@ -17,6 +17,7 @@ from app.models.studio_asset_images import (
 )
 from app.models.studio_prompts_files_timeline import FileItem, PromptTemplate, TimelineClip
 from app.models.studio_file_usages import FileUsage
+from app.models.studio_agent import AgentAction, AgentArtifact, AgentCheckpoint, AgentMessage, AgentSession
 from app.models.studio_projects import (
     Chapter,
     Project,
@@ -37,6 +38,15 @@ from app.models.studio_shots import (
 from app.models.types import (
     AssetQualityLevel,
     AssetViewAngle,
+    AgentActionStatus,
+    AgentActionType,
+    AgentArtifactKind,
+    AgentArtifactStatus,
+    AgentCheckpointStatus,
+    AgentMessageKind,
+    AgentMessageRole,
+    AgentSessionStage,
+    AgentSessionStatus,
     CameraAngle,
     CameraMovement,
     CameraShotType,
@@ -77,6 +87,15 @@ __all__ = [
     "DialogueLineMode",
     "VFXType",
     "PromptCategory",
+    "AgentSessionStage",
+    "AgentSessionStatus",
+    "AgentMessageRole",
+    "AgentMessageKind",
+    "AgentCheckpointStatus",
+    "AgentArtifactKind",
+    "AgentArtifactStatus",
+    "AgentActionType",
+    "AgentActionStatus",
     # Models
     "Project",
     "Chapter",
@@ -106,4 +125,9 @@ __all__ = [
     "FileItem",
     "FileUsage",
     "TimelineClip",
+    "AgentSession",
+    "AgentMessage",
+    "AgentCheckpoint",
+    "AgentArtifact",
+    "AgentAction",
 ]

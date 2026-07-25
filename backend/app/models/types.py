@@ -209,3 +209,100 @@ class PromptCategory(str, Enum):
     costume_image_front = "costume_image_front"
     costume_image_other = "costume_image_other"
     combined = "combined"
+
+
+class AgentSessionStage(str, Enum):
+    """Flova Agent 工作台阶段，按完整 Skill 预留到最终合成。"""
+
+    intake = "intake"
+    spec_review = "spec_review"
+    storyboard = "storyboard"
+    extract = "extract"
+    auto_confirm = "auto_confirm"
+    elements_gen = "elements_gen"
+    elements_review = "elements_review"
+    voice_anchor = "voice_anchor"
+    shot_video = "shot_video"
+    audio_layer = "audio_layer"
+    assemble_export = "assemble_export"
+    completed = "completed"
+
+
+class AgentSessionStatus(str, Enum):
+    """Agent 会话运行状态。"""
+
+    active = "active"
+    waiting_user = "waiting_user"
+    running = "running"
+    completed = "completed"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class AgentMessageRole(str, Enum):
+    """Agent 对话消息角色。"""
+
+    user = "user"
+    assistant = "assistant"
+    system = "system"
+
+
+class AgentMessageKind(str, Enum):
+    """Agent 对话消息展示类型。"""
+
+    text = "text"
+    question_card = "question_card"
+    task_update = "task_update"
+    error = "error"
+
+
+class AgentCheckpointStatus(str, Enum):
+    """Agent 确认点状态。"""
+
+    pending = "pending"
+    confirmed = "confirmed"
+    rejected = "rejected"
+    superseded = "superseded"
+
+
+class AgentArtifactKind(str, Enum):
+    """Agent 产物类型，第一批只落库到 Step 4 所需产物。"""
+
+    story_summary = "story_summary"
+    final_video_spec = "final_video_spec"
+    storyboard = "storyboard"
+
+
+class AgentArtifactStatus(str, Enum):
+    """Agent 产物版本状态。"""
+
+    draft = "draft"
+    confirmed = "confirmed"
+    superseded = "superseded"
+
+
+class AgentActionType(str, Enum):
+    """Agent 动作类型，按 Flova 完整流程预留，执行能力分批接入。"""
+
+    analyze = "analyze"
+    divide_shots = "divide_shots"
+    design_storyboard = "design_storyboard"
+    extract_assets = "extract_assets"
+    auto_confirm = "auto_confirm"
+    generate_element_image = "generate_element_image"
+    synthesize_prompt = "synthesize_prompt"
+    generate_voice_anchor = "generate_voice_anchor"
+    generate_shot_video = "generate_shot_video"
+    generate_audio_layer = "generate_audio_layer"
+    assemble_export = "assemble_export"
+    regenerate_target = "regenerate_target"
+
+
+class AgentActionStatus(str, Enum):
+    """Agent 动作执行状态。"""
+
+    pending = "pending"
+    running = "running"
+    succeeded = "succeeded"
+    failed = "failed"
+    cancelled = "cancelled"

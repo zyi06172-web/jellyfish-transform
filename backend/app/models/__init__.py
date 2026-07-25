@@ -11,6 +11,11 @@ from app.models.types import FileUsageKind
 from app.models.studio import (
     Actor,
     ActorImage,
+    AgentAction,
+    AgentArtifact,
+    AgentCheckpoint,
+    AgentMessage,
+    AgentSession,
     Chapter,
     Character,
     CharacterImage,
@@ -74,4 +79,9 @@ __all__ = [
     "ModelSettings",
     "GenerationTask",
     "GenerationTaskLink",
+    "AgentSession",
+    "AgentMessage",
+    "AgentCheckpoint",
+    "AgentArtifact",
+    "AgentAction",
 ]
