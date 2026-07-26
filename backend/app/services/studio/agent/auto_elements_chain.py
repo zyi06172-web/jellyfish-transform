@@ -61,6 +61,7 @@ from app.services.studio.agent.prompt_synthesizer import (
     FinalVideoSpec,
     ImagePromptRequest,
     PromptSynthesizer,
+    _is_wearable_accessory,
 )
 from app.services.studio.candidate_auto_confirm import auto_confirm_chapter_candidates
 from app.services.studio.image_task_runner import create_image_task_and_link, run_image_generation_task
@@ -526,15 +527,15 @@ async def _collect_element_image_targets(db: AsyncSession, *, project_id: str) -
     if targets:
         return targets
 
-    prop = (
+    props = (
         await db.execute(
             select(Prop)
             .join(ProjectPropLink, ProjectPropLink.prop_id == Prop.id)
             .where(ProjectPropLink.project_id == project_id)
             .order_by(Prop.id.asc())
-            .limit(1)
         )
-    ).scalars().first()
+    ).scalars().all()
+    prop = next((item for item in props if not _is_wearable_prop(item)), None)
     if prop is not None:
         row = await _ensure_image_slot(db, PropImage, owner_field="prop_id", owner_id=prop.id)
         targets.append(_image_slot_target(kind="prop", entity=prop, image_row_id=row.id))
@@ -553,6 +554,21 @@ async def _collect_element_image_targets(db: AsyncSession, *, project_id: str) -
         targets.append(_image_slot_target(kind="prop", entity=costume, image_row_id=row.id, relation_type="costume_image"))
 
     return targets
+
+
+def _is_wearable_prop(prop: Prop) -> bool:
+    """判断项目道具是否为应随角色入圣经的穿戴类配饰。"""
+
+    return _is_wearable_accessory(
+        ElementBible(
+            element_id=prop.id,
+            kind="prop",
+            name=prop.name,
+            identity=prop.description or "",
+            material=prop.description or "",
+            unique_marks=prop.description or "",
+        )
+    )
 
 
 async def _ensure_image_slot(

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.db import Base
-from app.models.studio import AgentMessage, AgentSession, Character, Project, ProjectSceneLink, Scene
+from app.models.studio import AgentMessage, AgentSession, Character, Project, ProjectPropLink, ProjectSceneLink, Prop, Scene
 from app.models.task import GenerationDeliveryMode, GenerationTask, GenerationTaskStatus
 from app.models.types import (
     AgentMessageKind,
@@ -18,6 +18,7 @@ from app.services.script_processing_tasks import SCRIPT_DIVIDE_TASK_KIND, SCRIPT
 from app.services.studio.agent.auto_elements_chain import (
     AutoElementsServices,
     ElementImageTarget,
+    _collect_element_image_targets,
     execute_agent_auto_elements_chain,
 )
 from app.services.studio.agent.prompt_synthesizer import ImagePromptRequest
@@ -171,6 +172,57 @@ async def test_auto_elements_chain_calls_existing_steps_in_order_and_prompts_bef
         assert len(task_updates) >= 6
         assert any("DeepSeek 拆分镜完成" in item.content for item in task_updates)
         assert any("9:16 关键元素图生成完成" in item.content for item in task_updates)
+    finally:
+        await db.close()
+        await engine.dispose()
+
+
+async def test_collect_element_targets_skips_wearable_accessory_props() -> None:
+    """仅有道具 fallback 时，穿戴配饰不单独出图，独立道具仍入目标。"""
+
+    db, engine = await _build_session()
+    try:
+        project = Project(
+            id="proj-props",
+            name="婚礼道具测试",
+            description="测试穿戴配饰和独立道具分流。",
+            style=ProjectStyle.real_people_city,
+            visual_style=ProjectVisualStyle.live_action,
+            seed=0,
+            unify_style=True,
+            progress=20,
+            default_video_ratio="9:16",
+            stats={},
+        )
+        brooch = Prop(
+            id="prop-brooch",
+            name="旧胸针",
+            description="沈知夏母亲留下的旧胸针，别在婚纱胸前。",
+            style=project.style,
+            visual_style=project.visual_style,
+        )
+        bouquet = Prop(
+            id="prop-bouquet",
+            name="捧花",
+            description="沈知夏手持的白色婚礼捧花，会单独出现在镜头里。",
+            style=project.style,
+            visual_style=project.visual_style,
+        )
+        db.add_all([project, brooch, bouquet])
+        await db.flush()
+        db.add_all(
+            [
+                ProjectPropLink(project_id=project.id, prop_id=brooch.id, chapter_id=None, shot_id=None),
+                ProjectPropLink(project_id=project.id, prop_id=bouquet.id, chapter_id=None, shot_id=None),
+            ]
+        )
+        await db.flush()
+
+        targets = await _collect_element_image_targets(db, project_id=project.id)
+
+        assert [target.kind for target in targets] == ["prop"]
+        assert targets[0].entity_id == "prop-bouquet"
+        assert targets[0].name == "捧花"
     finally:
         await db.close()
         await engine.dispose()

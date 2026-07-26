@@ -86,6 +86,30 @@ def _prop_request(user_instruction: str = "更精致一点") -> ImagePromptReque
     )
 
 
+def _independent_prop_request(user_instruction: str = "更精致一点") -> ImagePromptRequest:
+    return ImagePromptRequest(
+        final_video_spec=FinalVideoSpec(
+            title="婚礼协议",
+            output_language="中文",
+            visual_style="写实短剧",
+            aspect_ratio="9:16",
+        ),
+        element=ElementBible(
+            element_id="Element_捧花",
+            kind="prop",
+            name="捧花",
+            identity="沈知夏手持的白色婚礼捧花，会作为独立手持道具出现在镜头里",
+            material="白玫瑰、丝带和少量绿叶",
+            color="象牙白与淡绿色",
+            size="双手可握的花束大小",
+            condition="新鲜完整",
+            unique_marks="丝带尾端自然垂落",
+        ),
+        user_instruction=user_instruction,
+        chinese_environment=True,
+    )
+
+
 def _scene_request(user_instruction: str = "更庄重") -> ImagePromptRequest:
     return ImagePromptRequest(
         final_video_spec=FinalVideoSpec(
@@ -122,10 +146,12 @@ async def test_image_prompt_synthesizer_sends_three_sources_to_fake_llm() -> Non
     assert payload["element_bible"]["hairstyle"] == "低盘发，碎发贴近脸侧"
     assert payload["element_bible"]["hair_color"] == "黑色"
     assert payload["element_bible"]["clothing"] == "浅香槟色伴娘礼服，缎面材质，收腰剪裁"
-    assert "左侧正脸特写" in payload["element_bible"]["reference_layout"]
+    assert "标准角色设定表" in payload["element_bible"]["reference_layout"]
+    assert "大幅正脸特写" in payload["element_bible"]["reference_layout"]
     assert "全身正面" in payload["element_bible"]["reference_layout"]
     assert "全身侧面" in payload["element_bible"]["reference_layout"]
     assert "全身背面" in payload["element_bible"]["reference_layout"]
+    assert "pure white / clean white studio background" in payload["element_bible"]["reference_layout"]
     assert payload["cinematic_rules"] == list(CINEMATIC_RULES)
     assert payload["user_instruction"] == "女主更清冷、更年轻"
     assert "提示词使用中文" in payload["language_rule"]
@@ -154,19 +180,29 @@ async def test_image_prompt_contains_consistency_anchors_clean_screen_and_color_
     assert "90%" in prompt
     assert "单一主色调" in prompt
     assert "禁止红蓝霓虹冲突" in prompt
-    assert "左侧正脸特写" in prompt
+    assert "标准角色设定表" in prompt
+    assert "大幅正脸特写" in prompt
     assert "全身正面" in prompt
     assert "全身侧面" in prompt
     assert "全身背面" in prompt
     assert "A-pose" in prompt
-    assert "纯净无特征浅灰底" in prompt
-    assert "clean featureless soft grey" in prompt
+    assert "等大" in prompt
+    assert "统一光照" in prompt
+    assert "统一比例" in prompt
+    assert "禁止大小不一" in prompt
+    assert "pure white" in prompt
+    assert "clean white studio background" in prompt
+    assert "不是浅灰" in prompt
     assert "不含任何场景" in prompt
+    assert "穿戴类配饰" in prompt
+    assert "并入角色圣经" in prompt
+    assert "人物四视图身上" in prompt
+    assert "不单独生成资产图" in prompt
     assert "\n" not in prompt
 
 
-async def test_prop_prompt_gets_blank_background_but_no_character_four_view_rule() -> None:
-    """道具图只注入空白背景，不注入角色四视图。"""
+async def test_wearable_accessory_prompt_merges_into_character_bible() -> None:
+    """穿戴类配饰不单独出图，改为并入角色圣经。"""
 
     llm = FakePromptLLM("写实道具资产图，{name}置于画面中央，材质清晰。")
     synthesizer = PromptSynthesizer(llm)
@@ -175,11 +211,33 @@ async def test_prop_prompt_gets_blank_background_but_no_character_four_view_rule
     prompt = result.prompt
 
     assert "旧胸针" in prompt
-    assert "纯净无特征浅灰底" in prompt
-    assert "clean featureless soft grey" in prompt
-    assert "不含任何场景" in prompt
-    assert "左侧正脸特写" not in prompt
+    assert "穿戴类配饰" in prompt
+    assert "不要单独生成道具资产图" in prompt
+    assert "角色圣经" in prompt
+    assert "穿戴在人物身上" in prompt
+    assert "pure white" not in prompt
+    assert "clean featureless soft grey" not in prompt
+    assert "大幅正脸特写" not in prompt
     assert "全身背面" not in prompt
+
+
+async def test_independent_prop_prompt_gets_clean_white_background() -> None:
+    """独立道具仍单独出图，并使用纯白背景。"""
+
+    llm = FakePromptLLM("写实道具资产图，{name}置于画面中央，材质清晰。")
+    synthesizer = PromptSynthesizer(llm)
+
+    result = await synthesizer.synthesize_image_prompt(_independent_prop_request())
+    prompt = result.prompt
+
+    assert "捧花" in prompt
+    assert "独立道具资产图" in prompt
+    assert "pure white" in prompt
+    assert "clean white studio background" in prompt
+    assert "不是浅灰" in prompt
+    assert "不含任何场景" in prompt
+    assert "不要单独生成道具资产图" not in prompt
+    assert "大幅正脸特写" not in prompt
 
 
 async def test_scene_prompt_keeps_environment_background() -> None:
@@ -193,7 +251,8 @@ async def test_scene_prompt_keeps_environment_background() -> None:
 
     assert "婚礼大堂" in prompt
     assert "中央红毯" in prompt
-    assert "纯净无特征浅灰底" not in prompt
+    assert "pure white" not in prompt
+    assert "clean white studio background" not in prompt
     assert "clean featureless soft grey" not in prompt
     assert "不含任何场景" not in prompt
     assert "全身正面" not in prompt

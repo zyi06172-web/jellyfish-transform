@@ -169,8 +169,9 @@ def _element_bible_source(element: ElementBible) -> dict[str, Any]:
                 "body": element.body,
                 "temperament": element.temperament,
                 "reference_layout": (
-                    "角色参考图采用横向并列：左侧正脸特写；右侧全身正面、全身侧面、全身背面网格。"
-                    "四视角同一角色、同服装、同发型，A-pose 标准站姿，纯净无特征浅灰底。"
+                    "标准角色设定表横向规整布局：左侧一张大幅正脸特写；右侧三张等大、整齐网格并列的"
+                    "全身正面、全身侧面、全身背面。四视角同一角色、同服装、同发型、统一比例、统一光照，"
+                    "全部 A-pose 标准站姿，pure white / clean white studio background。"
                 ),
             }
         )
@@ -207,13 +208,62 @@ def _hard_rules(request: ImagePromptRequest) -> tuple[str, ...]:
     ]
     if request.element.kind == "character":
         rules.append(
-            "角色参考图必须横向并列：左侧正脸特写确认身份、肤色、眼型、眼神、发际线和五官比例；"
-            "右侧全身正面、全身侧面、全身背面网格确认服装正面、侧脸轮廓、发型侧面、身形、发型背面和服装背面；"
-            "四视角同一角色、同服装、同发型，仅角度不同，A-pose 标准站姿。"
+            "角色参考图必须是标准角色设定表规整布局：左侧仅一张大幅正脸特写确认身份、肤色、眼型、眼神、"
+            "发际线和五官比例；右侧三张等大、整齐网格并列的全身正面、全身侧面、全身背面，确认服装正面、"
+            "侧脸轮廓、发型侧面、身形、发型背面和服装背面；全部 A-pose、统一光照、统一比例，"
+            "禁止大小不一、位置散乱的拼贴。"
         )
-    if request.element.kind in {"character", "prop"}:
-        rules.append("角色图和道具图必须使用纯净无特征浅灰底 clean featureless soft grey，不含任何场景、环境、家具或背景元素。")
+        rules.append(
+            "穿戴类配饰必须并入角色圣经并画在人物四视图身上，不单独生成资产图；胸针、戒指、项链、耳环、"
+            "发饰、手表、领带夹等随身佩戴物要固定在对应身体/服装位置，例如沈知夏胸前别着旧胸针。"
+        )
+    if request.element.kind == "character":
+        rules.append(
+            "人物资产背景必须统一纯白 pure white / clean white studio background，不是浅灰，不含任何场景、环境、家具或背景元素。"
+        )
+    elif request.element.kind == "prop":
+        if _is_wearable_accessory(request.element):
+            rules.append(
+                "该元素是穿戴类配饰，不要单独生成道具资产图；必须作为角色圣经的一部分穿戴在人物身上，固定在对应身体/服装位置。"
+            )
+        else:
+            rules.append(
+                "独立道具资产图必须使用纯白 pure white / clean white studio background，不是浅灰，不含任何场景、环境、家具或背景元素。"
+            )
     return tuple(rules)
+
+
+_WEARABLE_ACCESSORY_TERMS: tuple[str, ...] = (
+    "胸针",
+    "戒指",
+    "项链",
+    "耳环",
+    "耳坠",
+    "发饰",
+    "头饰",
+    "手表",
+    "手链",
+    "袖扣",
+    "领带夹",
+    "别针",
+)
+
+
+def _is_wearable_accessory(element: ElementBible) -> bool:
+    """判断道具是否属于应并入角色圣经的穿戴类配饰。"""
+
+    haystack = " ".join(
+        [
+            element.name,
+            element.identity,
+            element.material,
+            element.color,
+            element.size,
+            element.condition,
+            element.unique_marks,
+        ]
+    )
+    return any(term in haystack for term in _WEARABLE_ACCESSORY_TERMS)
 
 
 def _append_missing_hard_rules(prompt: str, hard_rules: tuple[str, ...]) -> str:
@@ -232,10 +282,14 @@ def _rule_key_terms(rule: str) -> tuple[str, ...]:
         return ("不要出现任何文字",)
     if "90%" in rule:
         return ("90%", "单一主色调")
-    if "左侧正脸特写" in rule:
-        return ("左侧正脸特写", "全身正面", "全身侧面", "全身背面", "A-pose")
-    if "clean featureless soft grey" in rule:
-        return ("纯净无特征浅灰底", "clean featureless soft grey")
+    if "标准角色设定表规整布局" in rule:
+        return ("标准角色设定表", "左侧", "大幅正脸特写", "右侧", "等大", "全身正面", "全身侧面", "全身背面", "A-pose")
+    if "穿戴类配饰必须并入角色圣经" in rule:
+        return ("穿戴类配饰", "并入角色圣经", "人物四视图身上", "不单独生成资产图")
+    if "pure white / clean white studio background" in rule:
+        return ("pure white", "clean white studio background", "不是浅灰")
+    if "不要单独生成道具资产图" in rule:
+        return ("穿戴类配饰", "不要单独生成道具资产图", "角色圣经")
     return (rule,)
 
 
