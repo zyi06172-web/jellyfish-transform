@@ -262,7 +262,7 @@ def build_hand_drawn_storyboard_spec(
 ) -> StoryboardSpec:
     """确定性构建故事板可见总结、六要素和出图提示词。"""
 
-    character_name = character.name if character is not None else "主角"
+    character_name = _storyboard_subject_name(shot=shot, detail=detail, character=character)
     scene_name = scene.name if scene is not None else "当前场景"
     action_beats = list(detail.action_beats or []) if detail is not None else []
     movement = _enum_value(detail.movement) if detail is not None else "TRACK"
@@ -319,13 +319,14 @@ def build_hand_drawn_storyboard_page_spec(
     reference_character: Character | None,
     reference_scene: Scene | None,
 ) -> StoryboardPageSpec:
-    panel_count = len(panels)
+    sorted_panels = sorted(panels, key=lambda panel: panel.shot_index)
+    panel_count = len(sorted_panels)
     prompt = _storyboard_page_prompt(
-        panels=panels,
+        panels=sorted_panels,
         reference_character=reference_character,
         reference_scene=reference_scene,
     )
-    return StoryboardPageSpec(chapter_id=chapter_id, panel_count=panel_count, panels=panels, prompt=prompt)
+    return StoryboardPageSpec(chapter_id=chapter_id, panel_count=panel_count, panels=sorted_panels, prompt=prompt)
 
 
 async def _load_chapter_shots(db: AsyncSession, *, project_id: str, chapter_id: str) -> list[Shot]:
@@ -446,10 +447,13 @@ def _storyboard_page_prompt(
     )
     return (
         f"生成一张电影导演用手绘故事板页，9:16 竖图，一页纸内清晰分成 {len(panels)} 个分镜格。"
-        f"布局要求：使用专业电影分镜脚本排版，{layout}；每个格子边框清楚，格内是该镜头手绘分镜，格子下方留白写一句中文短总结。"
+        "脚本忠实度是最高优先级：严格忠实已给出的镜头内容，只做视觉化和构图表达；禁止自行扩展、改写、补写或添加镜头清单里没有的人物、事件、台词、道具、机构和反转；剧情要紧凑，不注水。"
+        f"布局要求：使用专业电影分镜脚本排版，{layout}；每个格子边框清楚，必须严格按照 1→2→3→4→... 的时间顺序从上到下、从左到右排列，第1格是剧情开头，最后一格是结尾，中间按时间推进，不能跳序、倒序或打断叙事流。"
+        "每个分镜格左上角必须标出清晰可见的格号数字 1、2、3、4...，像真实电影分镜脚本编号；编号只放在左上角，不遮挡主体。"
+        "格内是该镜头手绘分镜，格子下方留白写一句中文短总结。"
         "每格内部必须有红色箭头表示身体/手部运动，蓝色箭头表示摄像机运动，绿色小标记表示构图重点。"
         "红/蓝/绿标记只能放在格内画面上；六要素结构化信息不要写进图里。"
-        "允许每格下方有一句中文总结，除此之外不要标题、对白、字幕、水印、长段说明或技术参数。"
+        "允许每格左上角格号数字和格子下方一句中文总结，除此之外不要标题、对白、字幕、水印、长段说明或技术参数。"
         "整体风格：黑白铅笔手绘、灰阶阴影、纸面扫描质感、电影预演故事板，不追求脸部精细，重点是构图和运动。"
         f"逐格内容如下：\n{panel_lines}\n"
         f"角色一致性参考（只用于外形，不写字）：{character_bible}。"
@@ -472,6 +476,24 @@ def _one_sentence_summary(*, scene_name: str, character_name: str, shot: Shot, a
     if first_action:
         return f"{scene_name}，{title}，{first_action}。"
     return f"{scene_name}，{character_name}完成{title}，情绪和动作清晰推进。"
+
+
+def _storyboard_subject_name(*, shot: Shot, detail: ShotDetail | None, character: Character | None) -> str:
+    """避免旧角色链接把原剧本没有的主体带进故事板六要素。"""
+
+    source_text = " ".join(
+        part
+        for part in [
+            shot.title,
+            shot.script_excerpt,
+            detail.description if detail is not None else "",
+            "；".join(detail.action_beats or []) if detail is not None else "",
+        ]
+        if part
+    )
+    if character is not None and character.name and character.name in source_text:
+        return character.name
+    return _compact_shot_title(shot.title)
 
 
 def _compact_shot_title(title: str) -> str:
@@ -506,6 +528,7 @@ def _storyboard_prompt(
     scene_text = scene.description if scene is not None else ""
     return (
         "生成一张电影导演用手绘故事板图，9:16 竖图，黑白铅笔线稿加少量灰阶阴影，纸面扫描质感。"
+        "脚本忠实度是最高优先级：严格忠实镜头标题和剧情摘录，只做视觉化和构图表达；禁止自行扩展、改写、补写或添加镜头里没有的人物、事件、台词、道具、机构和反转；剧情要紧凑，不注水。"
         "必须像专业故事板：画面中只有构图、人物、场景、动作箭头和构图标记，不要任何文字、标题、对白、字幕、编号或水印。"
         "参考抖音钢琴师故事板标注体系：红色箭头表示身体/手部运动，蓝色箭头表示摄像机运动，绿色小标记表示构图重点；标记只能是箭头和抽象符号，不能写字。"
         f"镜头内容：{shot.title}，{shot.script_excerpt}。"
