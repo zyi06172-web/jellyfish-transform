@@ -210,18 +210,34 @@ async def _create_character_image_version(db: AsyncSession, *, character_id: str
 
 def _character_element_bible(character: Character) -> ElementBible:
     description = character.description or character.name
+    raw = character.bible_json or {}
+    anchors = raw.get("visual_anchors") if isinstance(raw.get("visual_anchors"), dict) else {}
+    accessories = raw.get("wearable_accessories") if isinstance(raw.get("wearable_accessories"), list) else []
+    accessory_text = "，".join(
+        f"{item.get('name')}固定在{item.get('placement')}"
+        for item in accessories
+        if isinstance(item, dict) and item.get("name")
+    )
+    identity = str(raw.get("identity") or description)
+    if accessory_text and accessory_text not in identity:
+        identity = f"{identity}；穿戴配饰：{accessory_text}"
     return ElementBible(
         element_id=character.id,
         kind="character",
-        name=character.name,
-        identity=description,
-        face_shape="与参考图一致的脸型",
-        jawline="稳定清晰的 jawline",
-        eye_shape="稳定可辨识的 eye shape",
-        hairstyle="与参考图一致的 hairstyle",
-        hair_color="与参考图一致的 hair color",
-        clothing="与参考图一致的 clothing",
-        temperament=description,
+        name=str(raw.get("name") or character.name),
+        identity=identity,
+        face_shape=str(anchors.get("face_shape") or "与参考图一致的脸型"),
+        jawline=str(anchors.get("jawline") or "稳定清晰的 jawline"),
+        eye_shape=str(anchors.get("eye_shape") or "稳定可辨识的 eye shape"),
+        gaze=str(anchors.get("gaze") or ""),
+        iris_color=str(anchors.get("iris_color") or ""),
+        hairstyle=str(anchors.get("hairstyle") or "与参考图一致的 hairstyle"),
+        hair_color=str(anchors.get("hair_color") or "与参考图一致的 hair color"),
+        makeup=str(anchors.get("makeup") or ""),
+        clothing=str(anchors.get("clothing") or "与参考图一致的 clothing"),
+        body=str(anchors.get("body") or ""),
+        temperament=str(anchors.get("temperament") or description),
+        voice=str(raw.get("voice") or ""),
     )
 
 

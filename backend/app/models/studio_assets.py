@@ -219,6 +219,12 @@ class Character(Base, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False, comment="角色名称")
     description: Mapped[str] = mapped_column(Text, nullable=False, default="", comment="角色描述")
+    bible_json: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+        comment="角色结构化圣经：脸型/眼型/发型/服装/穿戴配饰/气质/音色等",
+    )
     style: Mapped[ProjectStyle] = mapped_column(String(32), nullable=False, comment="题材/风格")
     visual_style: Mapped[ProjectVisualStyle] = mapped_column(
         String(16),
@@ -312,4 +318,3 @@ __all__ = [
     "Character",
     "CharacterPropLink",
 ]
-

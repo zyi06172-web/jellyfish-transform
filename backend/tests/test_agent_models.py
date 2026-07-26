@@ -145,3 +145,19 @@ def test_agent_sql_migration_declares_five_tables_and_rollback_notes() -> None:
         assert f"DROP TABLE IF EXISTS {table_name}" in sql
     assert "Rollback:" in sql
     assert "character_voice_anchors" not in sql
+
+
+def test_character_bible_sql_migration_declares_json_field_and_rollback_notes() -> None:
+    """资产库后端迁移必须添加角色圣经 JSON 字段，并写明回滚。"""
+
+    migration = Path(__file__).resolve().parents[1] / "sql" / "011-add-character-bible-json.sql"
+    sql = migration.read_text(encoding="utf-8")
+
+    assert migration.name.startswith("011-")
+    assert "ADD COLUMN bible_json JSON" in sql
+    assert "MODIFY COLUMN bible_json JSON NOT NULL" in sql
+    assert "information_schema.COLUMNS" in sql
+    assert "@has_characters_bible_json" in sql
+    assert "wearable_accessories" in sql
+    assert "Rollback:" in sql
+    assert "DROP COLUMN bible_json" in sql

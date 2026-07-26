@@ -62,6 +62,7 @@ from app.services.studio.agent.prompt_synthesizer import (
     ImagePromptRequest,
     PromptSynthesizer,
     _is_wearable_accessory,
+    build_character_bible_json,
 )
 from app.services.studio.candidate_auto_confirm import auto_confirm_chapter_candidates
 from app.services.studio.image_task_runner import create_image_task_and_link, run_image_generation_task
@@ -81,6 +82,7 @@ class ElementImageTarget:
     description: str
     relation_type: str
     relation_entity_id: str
+    bible_json: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)
@@ -253,6 +255,8 @@ async def execute_agent_auto_elements_chain(
         image_task_ids: list[str] = []
         for target in targets:
             request = _image_prompt_request(spec=spec, target=target)
+            if target.kind == "character":
+                await _persist_character_bible(db, target.entity_id, request)
             prompt = await services.synthesize_prompt(db, request)
             await _create_action(
                 db,
@@ -508,6 +512,7 @@ async def _collect_element_image_targets(db: AsyncSession, *, project_id: str) -
                 description=item.description,
                 relation_type="character",
                 relation_entity_id=item.id,
+                bible_json=item.bible_json,
             )
         )
 
@@ -647,19 +652,7 @@ async def _final_video_spec(db: AsyncSession, *, project: Project) -> FinalVideo
 def _image_prompt_request(*, spec: FinalVideoSpec, target: ElementImageTarget) -> ImagePromptRequest:
     description = target.description or target.name
     if target.kind == "character":
-        element = ElementBible(
-            element_id=target.entity_id,
-            kind="character",
-            name=target.name,
-            identity=description,
-            face_shape="与参考图一致的脸型",
-            jawline="清晰稳定的 jawline",
-            eye_shape="稳定可辨识的 eye shape",
-            hairstyle="与参考图一致的 hairstyle",
-            hair_color="与参考图一致的 hair color",
-            clothing="与参考图一致的 clothing",
-            temperament=description,
-        )
+        element = _character_element_bible_from_target(target, description)
     elif target.kind == "scene":
         element = ElementBible(
             element_id=target.entity_id,
@@ -685,6 +678,50 @@ def _image_prompt_request(*, spec: FinalVideoSpec, target: ElementImageTarget) -
         chinese_environment=True,
         extra_context={"phase": "phase6", "target_ratio": "9:16"},
     )
+
+
+def _character_element_bible_from_target(target: ElementImageTarget, description: str) -> ElementBible:
+    """优先从持久化 bible_json 还原角色锚点，缺失时使用描述兜底。"""
+
+    raw = target.bible_json or {}
+    anchors = raw.get("visual_anchors") if isinstance(raw.get("visual_anchors"), dict) else {}
+    accessories = raw.get("wearable_accessories") if isinstance(raw.get("wearable_accessories"), list) else []
+    accessory_text = "，".join(
+        f"{item.get('name')}固定在{item.get('placement')}"
+        for item in accessories
+        if isinstance(item, dict) and item.get("name")
+    )
+    identity = str(raw.get("identity") or description)
+    if accessory_text and accessory_text not in identity:
+        identity = f"{identity}；穿戴配饰：{accessory_text}"
+    return ElementBible(
+        element_id=target.entity_id,
+        kind="character",
+        name=str(raw.get("name") or target.name),
+        identity=identity,
+        face_shape=str(anchors.get("face_shape") or "与参考图一致的脸型"),
+        jawline=str(anchors.get("jawline") or "清晰稳定的 jawline"),
+        eye_shape=str(anchors.get("eye_shape") or "稳定可辨识的 eye shape"),
+        gaze=str(anchors.get("gaze") or ""),
+        iris_color=str(anchors.get("iris_color") or ""),
+        hairstyle=str(anchors.get("hairstyle") or "与参考图一致的 hairstyle"),
+        hair_color=str(anchors.get("hair_color") or "与参考图一致的 hair color"),
+        makeup=str(anchors.get("makeup") or ""),
+        clothing=str(anchors.get("clothing") or "与参考图一致的 clothing"),
+        body=str(anchors.get("body") or ""),
+        temperament=str(anchors.get("temperament") or description),
+        voice=str(raw.get("voice") or ""),
+    )
+
+
+async def _persist_character_bible(db: AsyncSession, character_id: str, request: ImagePromptRequest) -> None:
+    """把本次角色提示词使用的完整圣经写回角色，供跨章节复用。"""
+
+    character = await db.get(Character, character_id)
+    if character is None:
+        return
+    character.bible_json = build_character_bible_json(request)
+    await db.flush()
 
 
 async def _upsert_storyboard_artifact(db: AsyncSession, *, project_id: str, result: dict[str, Any]) -> None:

@@ -7,6 +7,7 @@ import type { ApiResponse_AgentTurnRead_ } from '../models/ApiResponse_AgentTurn
 import type { ApiResponse_AgentWorkspaceSnapshotRead_ } from '../models/ApiResponse_AgentWorkspaceSnapshotRead_';
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
+import type { ApiResponse_ProjectAssetLibraryRead_ } from '../models/ApiResponse_ProjectAssetLibraryRead_';
 import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
 import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
 import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
@@ -151,6 +152,27 @@ export class StudioProjectsService {
             },
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取项目资产库
+     * @returns ApiResponse_ProjectAssetLibraryRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectAssetLibraryApiV1StudioProjectsProjectIdAssetLibraryGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_ProjectAssetLibraryRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}/asset-library',
+            path: {
+                'project_id': projectId,
+            },
             errors: {
                 422: `Validation Error`,
             },

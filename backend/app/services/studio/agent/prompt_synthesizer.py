@@ -195,6 +195,78 @@ def _element_bible_source(element: ElementBible) -> dict[str, Any]:
     return {key: value for key, value in base.items() if value not in ("", None)}
 
 
+def build_character_bible_json(request: ImagePromptRequest) -> dict[str, Any]:
+    """把角色提示词请求固化为可跨章节复用的结构化圣经。"""
+
+    if request.element.kind != "character":
+        raise ValueError("character bible can only be built for character elements")
+    source = _element_bible_source(request.element)
+    return {
+        "schema_version": 1,
+        "source": "prompt_synthesizer",
+        "element_id": request.element.element_id,
+        "name": request.element.name,
+        "identity": request.element.identity,
+        "visual_anchors": {
+            "face_shape": request.element.face_shape,
+            "jawline": request.element.jawline,
+            "eye_shape": request.element.eye_shape,
+            "gaze": request.element.gaze,
+            "iris_color": request.element.iris_color,
+            "hairstyle": request.element.hairstyle,
+            "hair_color": request.element.hair_color,
+            "makeup": request.element.makeup,
+            "clothing": request.element.clothing,
+            "body": request.element.body,
+            "temperament": request.element.temperament,
+        },
+        "wearable_accessories": _wearable_accessories_from_character(request.element),
+        "voice": request.element.voice,
+        "reference_layout": source.get("reference_layout", ""),
+        "hard_rules": list(_hard_rules(request)),
+        "final_video_spec": {
+            "title": request.final_video_spec.title,
+            "output_language": request.final_video_spec.output_language,
+            "visual_style": request.final_video_spec.visual_style,
+            "aspect_ratio": request.final_video_spec.aspect_ratio,
+        },
+    }
+
+
+def _wearable_accessories_from_character(element: ElementBible) -> list[dict[str, str]]:
+    haystack = " ".join(
+        [
+            element.identity,
+            element.clothing,
+            element.makeup,
+            element.temperament,
+            element.unique_marks,
+        ]
+    )
+    found = [term for term in WEARABLE_ACCESSORY_TERMS if term in haystack]
+    return [
+        {
+            "name": term,
+            "placement": _wearable_accessory_placement(term, haystack),
+        }
+        for term in found
+    ]
+
+
+def _wearable_accessory_placement(term: str, haystack: str) -> str:
+    if term == "胸针" and ("胸前" in haystack or "胸口" in haystack):
+        return "胸前/胸口固定佩戴"
+    if term in {"戒指", "手表", "手链"}:
+        return "手部/腕部固定佩戴"
+    if term in {"项链"}:
+        return "颈部固定佩戴"
+    if term in {"耳环", "耳坠"}:
+        return "耳部固定佩戴"
+    if term in {"发饰", "头饰"}:
+        return "发型上固定佩戴"
+    return "随身穿戴，位置需跨图保持一致"
+
+
 def _hard_rules(request: ImagePromptRequest) -> tuple[str, ...]:
     neon_rule = (
         "除非用户明确要求，禁止红蓝霓虹冲突。"
@@ -233,7 +305,7 @@ def _hard_rules(request: ImagePromptRequest) -> tuple[str, ...]:
     return tuple(rules)
 
 
-_WEARABLE_ACCESSORY_TERMS: tuple[str, ...] = (
+WEARABLE_ACCESSORY_TERMS: tuple[str, ...] = (
     "胸针",
     "戒指",
     "项链",
@@ -263,7 +335,7 @@ def _is_wearable_accessory(element: ElementBible) -> bool:
             element.unique_marks,
         ]
     )
-    return any(term in haystack for term in _WEARABLE_ACCESSORY_TERMS)
+    return any(term in haystack for term in WEARABLE_ACCESSORY_TERMS)
 
 
 def _append_missing_hard_rules(prompt: str, hard_rules: tuple[str, ...]) -> str:

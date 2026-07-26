@@ -12,6 +12,7 @@ from app.models.studio import (
     CameraMovement,
     CameraShotType,
     Chapter,
+    Character,
     Project,
     ProjectStyle,
     ProjectVisualStyle,
@@ -20,6 +21,7 @@ from app.models.studio import (
     Shot,
     ShotCandidateStatus,
     ShotCandidateType,
+    ShotCharacterLink,
     ShotDetail,
     ShotExtractedCandidate,
 )
@@ -130,4 +132,61 @@ async def test_l3_auto_confirm_reuses_created_asset_across_chapter() -> None:
         assert prop_count == 1
         link_count = await db.scalar(select(func.count(ProjectPropLink.id)))
         assert link_count == 2
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_l3_auto_confirm_reuses_existing_character_across_chapters() -> None:
+    db, engine = await _build_session()
+    async with db:
+        bible = {
+            "schema_version": 1,
+            "source": "test",
+            "identity": "冷司寒，黑色西装，冷峻克制。",
+            "visual_anchors": {"eye_shape": "狭长冷眼", "hairstyle": "黑色背头", "clothing": "黑色西装"},
+            "wearable_accessories": [{"name": "袖扣", "placement": "袖口固定佩戴"}],
+        }
+        db.add(Project(id="p1", name="短剧", style=ProjectStyle.real_people_city, visual_style=ProjectVisualStyle.live_action))
+        db.add_all(
+            [
+                Chapter(id="ch1", project_id="p1", index=1, title="第一集"),
+                Chapter(id="ch2", project_id="p1", index=2, title="第二集"),
+            ]
+        )
+        db.add(
+            Character(
+                id="char-leng",
+                project_id="p1",
+                name="冷司寒",
+                description="第一集已确认的男主。",
+                bible_json=bible,
+                style=ProjectStyle.real_people_city,
+                visual_style=ProjectVisualStyle.live_action,
+            )
+        )
+        shot = Shot(id="s2", chapter_id="ch2", index=1, title="第二集镜头", script_excerpt="冷司寒推门入场。")
+        db.add(shot)
+        db.add(ShotDetail(id="s2", camera_shot=CameraShotType.ms, angle=CameraAngle.eye_level, movement=CameraMovement.static, duration=5))
+        db.add(
+            ShotExtractedCandidate(
+                shot_id="s2",
+                candidate_type=ShotCandidateType.character,
+                candidate_name="冷司寒",
+                candidate_status=ShotCandidateStatus.pending,
+                source="test",
+                payload={"description": "第二集再次出现的冷司寒"},
+            )
+        )
+        await db.commit()
+
+        result = await auto_confirm_chapter_candidates(db, chapter_id="ch2", level="L3")
+
+        assert result.created_and_linked == 0
+        assert result.linked_existing == 1
+        character_count = await db.scalar(select(func.count(Character.id)).where(Character.project_id == "p1", Character.name == "冷司寒"))
+        assert character_count == 1
+        link = (await db.execute(select(ShotCharacterLink).where(ShotCharacterLink.shot_id == "s2"))).scalars().one()
+        assert link.character_id == "char-leng"
+        candidate = (await db.execute(select(ShotExtractedCandidate))).scalars().one()
+        assert candidate.linked_entity_id == "char-leng"
     await engine.dispose()

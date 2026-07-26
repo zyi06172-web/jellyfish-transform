@@ -31,6 +31,7 @@ from app.services.common import (
 )
 from app.schemas.studio.projects import (
     ProjectCreate,
+    ProjectAssetLibraryRead,
     ProjectFromPromptRead,
     ProjectFromPromptRequest,
     ProjectRead,
@@ -49,6 +50,7 @@ from app.services.studio.agent.element_regeneration import regenerate_element_im
 from app.services.studio.agent.turn_decision_llm import LLMAgentTurnDecisionLLM
 from app.services.studio.agent.types import AgentTurnCommand, AgentTurnInput
 from app.services.studio.agent.video_creation_agent import VideoCreationAgent
+from app.services.studio.asset_library import build_project_asset_library
 
 router = APIRouter()
 
@@ -267,6 +269,19 @@ async def handle_project_agent_turn(
             workspace_patch=result.workspace_patch,
         )
     )
+
+
+@router.get(
+    "/{project_id}/asset-library",
+    response_model=ApiResponse[ProjectAssetLibraryRead],
+    summary="获取项目资产库",
+)
+async def get_project_asset_library(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectAssetLibraryRead]:
+    await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    return success_response(await build_project_asset_library(db, project_id=project_id))
 
 
 @router.get(

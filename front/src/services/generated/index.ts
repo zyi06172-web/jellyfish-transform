@@ -56,6 +56,7 @@ export type { ApiResponse_PaginatedData_ShotLinkedAssetItem__ } from './models/A
 export type { ApiResponse_PaginatedData_ShotRead__ } from './models/ApiResponse_PaginatedData_ShotRead__';
 export type { ApiResponse_PaginatedData_TaskListItemRead__ } from './models/ApiResponse_PaginatedData_TaskListItemRead__';
 export type { ApiResponse_ProjectActorLinkRead_ } from './models/ApiResponse_ProjectActorLinkRead_';
+export type { ApiResponse_ProjectAssetLibraryRead_ } from './models/ApiResponse_ProjectAssetLibraryRead_';
 export type { ApiResponse_ProjectCostumeLinkRead_ } from './models/ApiResponse_ProjectCostumeLinkRead_';
 export type { ApiResponse_ProjectFromPromptRead_ } from './models/ApiResponse_ProjectFromPromptRead_';
 export type { ApiResponse_ProjectPropLinkRead_ } from './models/ApiResponse_ProjectPropLinkRead_';
@@ -92,6 +93,9 @@ export type { ApiResponse_TaskStatusRead_ } from './models/ApiResponse_TaskStatu
 export type { ApiResponse_VariantAnalysisResult_ } from './models/ApiResponse_VariantAnalysisResult_';
 export type { ApiResponse_VideoGenerationOptionsRead_ } from './models/ApiResponse_VideoGenerationOptionsRead_';
 export type { ApiResponse_VideoPromptPreviewResponse_ } from './models/ApiResponse_VideoPromptPreviewResponse_';
+export type { AssetLibraryItemRead } from './models/AssetLibraryItemRead';
+export type { AssetLibraryReferenceImageRead } from './models/AssetLibraryReferenceImageRead';
+export type { AssetLibraryRelationRead } from './models/AssetLibraryRelationRead';
 export type { AsyncTaskCreateRead } from './models/AsyncTaskCreateRead';
 export type { Body_upload_file_api_api_v1_studio_files_upload_post } from './models/Body_upload_file_api_api_v1_studio_files_upload_post';
 export type { CameraAngle } from './models/CameraAngle';
@@ -155,6 +159,7 @@ export type { PaginatedData_ShotRead_ } from './models/PaginatedData_ShotRead_';
 export type { PaginatedData_TaskListItemRead_ } from './models/PaginatedData_TaskListItemRead_';
 export type { Pagination } from './models/Pagination';
 export type { ProjectActorLinkRead } from './models/ProjectActorLinkRead';
+export type { ProjectAssetLibraryRead } from './models/ProjectAssetLibraryRead';
 export type { ProjectAssetLinkCreate } from './models/ProjectAssetLinkCreate';
 export type { ProjectCostumeLinkRead } from './models/ProjectCostumeLinkRead';
 export type { ProjectCreate } from './models/ProjectCreate';

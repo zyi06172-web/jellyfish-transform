@@ -111,3 +111,44 @@ class ProjectStyleOptionsRead(BaseModel):
         default_factory=dict,
         description="各视觉风格默认视频风格",
     )
+
+
+class AssetLibraryReferenceImageRead(BaseModel):
+    """资产库参考图。"""
+
+    image_id: int = Field(..., description="资产图片行 ID")
+    file_id: str = Field(..., description="文件 ID")
+    url: str = Field(..., description="下载 URL")
+    view_angle: str = Field(..., description="视角")
+    quality_level: str = Field(..., description="质量等级")
+    is_primary: bool = Field(False, description="是否主图")
+
+
+class AssetLibraryRelationRead(BaseModel):
+    """资产库卡片关系边。"""
+
+    relation_type: str = Field(..., description="关系类型")
+    target_type: str = Field(..., description="目标资产类型")
+    target_id: str = Field(..., description="目标资产 ID")
+    label: str = Field("", description="关系展示标签")
+
+
+class AssetLibraryItemRead(BaseModel):
+    """资产库单个资产。"""
+
+    id: str = Field(..., description="资产 ID")
+    type: str = Field(..., description="资产类型：character/scene/prop")
+    name: str = Field(..., description="资产名称")
+    description: str = Field("", description="资产描述")
+    bible: dict[str, Any] = Field(default_factory=dict, description="角色圣经；非角色可为空")
+    reference_images: list[AssetLibraryReferenceImageRead] = Field(default_factory=list, description="参考图列表")
+    relations: list[AssetLibraryRelationRead] = Field(default_factory=list, description="卡片关系")
+
+
+class ProjectAssetLibraryRead(BaseModel):
+    """项目资产库读视图。"""
+
+    project_id: str = Field(..., description="项目 ID")
+    characters: list[AssetLibraryItemRead] = Field(default_factory=list, description="角色资产")
+    scenes: list[AssetLibraryItemRead] = Field(default_factory=list, description="场景资产")
+    props: list[AssetLibraryItemRead] = Field(default_factory=list, description="道具资产")

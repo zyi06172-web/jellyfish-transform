@@ -33,6 +33,7 @@ from app.services.studio.shot_extracted_candidates import mark_linked
 from app.services.studio.shot_assets import create_project_asset_link
 from app.services.studio.shot_character_links import upsert as upsert_shot_character_link
 from app.services.studio.shot_preparation_state import build_shot_preparation_state
+from app.services.studio.agent.prompt_synthesizer import WEARABLE_ACCESSORY_TERMS
 
 AutoConfirmLevel = Literal["L1", "L2", "L3"]
 
@@ -69,6 +70,37 @@ def _candidate_description(row: ShotExtractedCandidate) -> str:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return f"由分镜候选自动创建：{row.candidate_name}"
+
+
+def _initial_character_bible_json(*, name: str, description: str) -> dict:
+    """为候选新建角色写入可后续覆盖的初始圣经。"""
+
+    haystack = f"{name} {description}"
+    return {
+        "schema_version": 1,
+        "source": "candidate_auto_confirm",
+        "name": name,
+        "identity": description,
+        "visual_anchors": {
+            "face_shape": "",
+            "jawline": "",
+            "eye_shape": "",
+            "gaze": "",
+            "iris_color": "",
+            "hairstyle": "",
+            "hair_color": "",
+            "makeup": "",
+            "clothing": "",
+            "body": "",
+            "temperament": description,
+        },
+        "wearable_accessories": [
+            {"name": term, "placement": "随身穿戴，位置需跨图保持一致"}
+            for term in WEARABLE_ACCESSORY_TERMS
+            if term in haystack
+        ],
+        "voice": "",
+    }
 
 
 async def _get_project_and_chapter(db: AsyncSession, *, shot: Shot) -> tuple[Project, Chapter]:
@@ -136,11 +168,13 @@ async def _create_entity_from_candidate(
     name = row.candidate_name.strip()
     candidate_type = _candidate_type(row.candidate_type)
     if candidate_type == ShotCandidateType.character:
+        description = _candidate_description(row)
         entity = Character(
             id=_new_id("char"),
             project_id=project.id,
             name=name,
-            description=_candidate_description(row),
+            description=description,
+            bible_json=_initial_character_bible_json(name=name, description=description),
             style=project.style,
             visual_style=project.visual_style,
             actor_id=None,
