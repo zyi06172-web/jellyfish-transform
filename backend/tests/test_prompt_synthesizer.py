@@ -11,6 +11,8 @@ from app.services.studio.agent.prompt_synthesizer import (
     VideoPromptRequest,
 )
 
+pytestmark = pytest.mark.asyncio
+
 
 class FakePromptLLM:
     """Fake LLM adapter：记录合成输入，并返回一段单段落提示词。"""
@@ -60,6 +62,51 @@ def _character_request(user_instruction: str = "女主更清冷、更年轻") ->
     )
 
 
+def _prop_request(user_instruction: str = "更精致一点") -> ImagePromptRequest:
+    return ImagePromptRequest(
+        final_video_spec=FinalVideoSpec(
+            title="婚礼协议",
+            output_language="中文",
+            visual_style="写实短剧",
+            aspect_ratio="9:16",
+        ),
+        element=ElementBible(
+            element_id="Element_旧胸针",
+            kind="prop",
+            name="旧胸针",
+            identity="沈知夏母亲留下的旧胸针",
+            material="暗金色金属和微旧珍珠",
+            color="暖金与象牙白",
+            size="掌心大小",
+            condition="有轻微岁月磨损",
+            unique_marks="边缘有一处细小刻痕",
+        ),
+        user_instruction=user_instruction,
+        chinese_environment=True,
+    )
+
+
+def _scene_request(user_instruction: str = "更庄重") -> ImagePromptRequest:
+    return ImagePromptRequest(
+        final_video_spec=FinalVideoSpec(
+            title="婚礼协议",
+            output_language="中文",
+            visual_style="写实短剧",
+            aspect_ratio="9:16",
+        ),
+        element=ElementBible(
+            element_id="Element_婚礼大堂",
+            kind="scene",
+            name="婚礼大堂",
+            identity="仪式举行的大堂",
+            spatial_layout="中央红毯，两侧宾客席，远端舞台与巨幕",
+            action_area="红毯中央与舞台前方",
+        ),
+        user_instruction=user_instruction,
+        chinese_environment=True,
+    )
+
+
 async def test_image_prompt_synthesizer_sends_three_sources_to_fake_llm() -> None:
     """合成器向 LLM 提供角色圣经、六条电影级规则和用户自然语言三源。"""
 
@@ -75,6 +122,10 @@ async def test_image_prompt_synthesizer_sends_three_sources_to_fake_llm() -> Non
     assert payload["element_bible"]["hairstyle"] == "低盘发，碎发贴近脸侧"
     assert payload["element_bible"]["hair_color"] == "黑色"
     assert payload["element_bible"]["clothing"] == "浅香槟色伴娘礼服，缎面材质，收腰剪裁"
+    assert "左侧正脸特写" in payload["element_bible"]["reference_layout"]
+    assert "全身正面" in payload["element_bible"]["reference_layout"]
+    assert "全身侧面" in payload["element_bible"]["reference_layout"]
+    assert "全身背面" in payload["element_bible"]["reference_layout"]
     assert payload["cinematic_rules"] == list(CINEMATIC_RULES)
     assert payload["user_instruction"] == "女主更清冷、更年轻"
     assert "提示词使用中文" in payload["language_rule"]
@@ -103,9 +154,49 @@ async def test_image_prompt_contains_consistency_anchors_clean_screen_and_color_
     assert "90%" in prompt
     assert "单一主色调" in prompt
     assert "禁止红蓝霓虹冲突" in prompt
-    assert "左侧脸部近景" in prompt
-    assert "右侧全身" in prompt
+    assert "左侧正脸特写" in prompt
+    assert "全身正面" in prompt
+    assert "全身侧面" in prompt
+    assert "全身背面" in prompt
+    assert "A-pose" in prompt
+    assert "纯净无特征浅灰底" in prompt
+    assert "clean featureless soft grey" in prompt
+    assert "不含任何场景" in prompt
     assert "\n" not in prompt
+
+
+async def test_prop_prompt_gets_blank_background_but_no_character_four_view_rule() -> None:
+    """道具图只注入空白背景，不注入角色四视图。"""
+
+    llm = FakePromptLLM("写实道具资产图，{name}置于画面中央，材质清晰。")
+    synthesizer = PromptSynthesizer(llm)
+
+    result = await synthesizer.synthesize_image_prompt(_prop_request())
+    prompt = result.prompt
+
+    assert "旧胸针" in prompt
+    assert "纯净无特征浅灰底" in prompt
+    assert "clean featureless soft grey" in prompt
+    assert "不含任何场景" in prompt
+    assert "左侧正脸特写" not in prompt
+    assert "全身背面" not in prompt
+
+
+async def test_scene_prompt_keeps_environment_background() -> None:
+    """场景图不注入角色/道具空白背景规则，保留正常环境出图空间。"""
+
+    llm = FakePromptLLM("婚礼大堂全景，中央红毯、宾客席、舞台和巨幕，空间层次清楚。")
+    synthesizer = PromptSynthesizer(llm)
+
+    result = await synthesizer.synthesize_image_prompt(_scene_request())
+    prompt = result.prompt
+
+    assert "婚礼大堂" in prompt
+    assert "中央红毯" in prompt
+    assert "纯净无特征浅灰底" not in prompt
+    assert "clean featureless soft grey" not in prompt
+    assert "不含任何场景" not in prompt
+    assert "全身正面" not in prompt
 
 
 async def test_image_prompt_zero_user_input_still_produces_complete_prompt() -> None:

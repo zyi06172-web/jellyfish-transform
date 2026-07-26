@@ -168,7 +168,10 @@ def _element_bible_source(element: ElementBible) -> dict[str, Any]:
                 "clothing": element.clothing,
                 "body": element.body,
                 "temperament": element.temperament,
-                "reference_layout": "角色参考图采用横向并列：左侧脸部近景，右侧全身照。",
+                "reference_layout": (
+                    "角色参考图采用横向并列：左侧正脸特写；右侧全身正面、全身侧面、全身背面网格。"
+                    "四视角同一角色、同服装、同发型，A-pose 标准站姿，纯净无特征浅灰底。"
+                ),
             }
         )
     elif element.kind == "prop":
@@ -203,7 +206,13 @@ def _hard_rules(request: ImagePromptRequest) -> tuple[str, ...]:
         f"调色约 90% 画面保持单一主色调，{neon_rule}",
     ]
     if request.element.kind == "character":
-        rules.append("角色参考图必须横向并列：左侧脸部近景确认身份、肤色、眼睛和发际线，右侧全身确认服装、发型、妆造、鞋和轮廓。")
+        rules.append(
+            "角色参考图必须横向并列：左侧正脸特写确认身份、肤色、眼型、眼神、发际线和五官比例；"
+            "右侧全身正面、全身侧面、全身背面网格确认服装正面、侧脸轮廓、发型侧面、身形、发型背面和服装背面；"
+            "四视角同一角色、同服装、同发型，仅角度不同，A-pose 标准站姿。"
+        )
+    if request.element.kind in {"character", "prop"}:
+        rules.append("角色图和道具图必须使用纯净无特征浅灰底 clean featureless soft grey，不含任何场景、环境、家具或背景元素。")
     return tuple(rules)
 
 
@@ -223,8 +232,10 @@ def _rule_key_terms(rule: str) -> tuple[str, ...]:
         return ("不要出现任何文字",)
     if "90%" in rule:
         return ("90%", "单一主色调")
-    if "横向并列" in rule:
-        return ("左侧脸部近景", "右侧全身")
+    if "左侧正脸特写" in rule:
+        return ("左侧正脸特写", "全身正面", "全身侧面", "全身背面", "A-pose")
+    if "clean featureless soft grey" in rule:
+        return ("纯净无特征浅灰底", "clean featureless soft grey")
     return (rule,)
 
 
