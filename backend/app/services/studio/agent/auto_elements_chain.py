@@ -399,7 +399,8 @@ async def _create_and_run_image_task(db: AsyncSession, target: ElementImageTarge
     await db.refresh(task)
     run_args = dict((task.payload or {}).get("run_args") or {})
     await run_image_generation_task(task_id, run_args)
-    await _task_result_or_raise(db, task_id, task_label="Seedream 出图")
+    async with async_session_maker() as check_db:
+        await _task_result_or_raise(check_db, task_id, task_label="Seedream 出图")
     return task_id
 
 
@@ -509,9 +510,6 @@ async def _collect_element_image_targets(db: AsyncSession, *, project_id: str) -
             )
         )
 
-    if targets:
-        return targets
-
     scene = (
         await db.execute(
             select(Scene)
@@ -524,6 +522,9 @@ async def _collect_element_image_targets(db: AsyncSession, *, project_id: str) -
     if scene is not None:
         row = await _ensure_image_slot(db, SceneImage, owner_field="scene_id", owner_id=scene.id)
         targets.append(_image_slot_target(kind="scene", entity=scene, image_row_id=row.id))
+
+    if targets:
+        return targets
 
     prop = (
         await db.execute(

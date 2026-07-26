@@ -107,6 +107,8 @@ class ScriptDividerAgent(AgentBase[ScriptDivisionResult]):
                     elif "shot_title" in shot_dict:
                         shot_dict["shot_name"] = str(shot_dict.pop("shot_title"))
                 shot_dict.setdefault("shot_name", "")
+                if "time_of_day" in shot_dict:
+                    shot_dict["time_of_day"] = _normalize_time_of_day(shot_dict.get("time_of_day"))
                 # 严格对齐 ShotDivision：移除已废弃的弱语义字段，避免 extra="forbid" 校验失败
                 shot_dict.pop("scene_name", None)
                 shot_dict.pop("character_names_in_text", None)
@@ -119,3 +121,21 @@ class ScriptDividerAgent(AgentBase[ScriptDivisionResult]):
 
         return data
 
+
+def _normalize_time_of_day(value: Any) -> Any:
+    if value is None:
+        return value
+    text = str(value).strip()
+    return {
+        "白天": "日",
+        "白日": "日",
+        "日间": "日",
+        "夜晚": "夜",
+        "晚上": "夜",
+        "夜间": "夜",
+        "清晨": "黎明",
+        "凌晨": "黎明",
+        "傍晚": "黄昏",
+        "傍晚时分": "黄昏",
+        "未知时间": "未知",
+    }.get(text, value)

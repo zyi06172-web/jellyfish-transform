@@ -339,11 +339,14 @@ async def run_image_generation_task(
                     base_url=base_url,
                 ),
                 input_=ImageGenerationInput.model_validate(input_dict),
+                timeout_s=_provider_timeout_seconds(run_args),
             )
             await task.run()
             result = await task.get_result()
             if result is None:
-                raise RuntimeError("Image generation task returned no result")
+                status = await task.status()
+                detail = str(status.get("error") or "").strip()
+                raise RuntimeError(f"Image generation task returned no result: {detail or status}")
             if await cancel_if_requested_async(store=store, task_id=task_id, session=session):
                 log_task_event("image_generation", task_id, "cancelled", stage="after_execute")
                 return
@@ -389,3 +392,12 @@ async def run_image_generation_task(
                     await recompute_shot_status(s2, shot_id=related_shot_id)
                 await s2.commit()
             log_task_failure("image_generation", task_id, str(exc))
+
+
+def _provider_timeout_seconds(run_args: dict) -> float:
+    value = run_args.get("provider_timeout_seconds") or run_args.get("timeout_seconds")
+    try:
+        timeout_seconds = float(value)
+    except (TypeError, ValueError):
+        timeout_seconds = 180.0
+    return timeout_seconds if timeout_seconds > 0 else 180.0

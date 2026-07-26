@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
@@ -116,6 +117,7 @@ class PromptSynthesizer:
         }
         raw_prompt = await self._llm.synthesize_image_prompt(llm_payload)
         prompt = _single_paragraph(raw_prompt)
+        prompt = _provider_safe_prompt(prompt)
         hard_rules = _hard_rules(request)
         prompt = _append_missing_hard_rules(prompt, hard_rules)
         return ImagePromptResult(prompt=prompt, hard_rules=hard_rules)
@@ -127,7 +129,7 @@ class PromptSynthesizer:
 
 
 CINEMATIC_RULES: tuple[str, ...] = (
-    "专业风格术语：使用具体电影作者、导演或作品视觉锚点，不写泛泛的 film noir。",
+    "专业风格术语：使用可执行的电影级构图、光影、镜头和调色锚点，不写泛泛的 film noir。",
     "构图与镜头：写清景别、角度和镜头构图，例如 close-up、over-the-shoulder、Dutch angle。",
     "光影：明确主光方向和质感，加入 negative fill 形成明暗对比。",
     "调色：好莱坞高级调色，约 90% 画面保持单一主色调；除非用户明确要求，禁止红蓝霓虹冲突。",
@@ -228,3 +230,28 @@ def _rule_key_terms(rule: str) -> tuple[str, ...]:
 
 def _single_paragraph(text: str) -> str:
     return " ".join(text.replace("\r", "\n").split())
+
+
+_PROVIDER_SENSITIVE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("王家卫", "高密度暖色都市怀旧影像"),
+    ("Wong Kar-wai", "高密度暖色都市怀旧影像"),
+    ("Wong Kar Wai", "高密度暖色都市怀旧影像"),
+    ("韦斯·安德森", "精确对称构图与低饱和复古调色"),
+    ("韦斯-安德森", "精确对称构图与低饱和复古调色"),
+    ("Wes Anderson", "精确对称构图与低饱和复古调色"),
+    ("罗伯特·约曼", "精确构图与柔和胶片质感"),
+    ("Robert Yeoman", "精确构图与柔和胶片质感"),
+    ("《花样年华》", "暖琥珀色都市怀旧影像"),
+    ("In the Mood for Love", "暖琥珀色都市怀旧影像"),
+    ("Kodak 5219", "柔和 35mm 胶片质感"),
+)
+
+
+def _provider_safe_prompt(prompt: str) -> str:
+    """把易触发商用图像平台版权风格拦截的专名转写为可执行视觉特征。"""
+
+    result = prompt
+    for source, replacement in _PROVIDER_SENSITIVE_REPLACEMENTS:
+        result = result.replace(source, replacement)
+    result = re.sub(r"参考[^，。；]{0,24}(导演|掌镜|作品)[^，。；]{0,24}[，。；]?", "参考电影级视觉语言，", result)
+    return _single_paragraph(result)

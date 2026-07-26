@@ -143,6 +143,23 @@ async def test_image_prompt_respects_red_blue_neon_user_override() -> None:
     assert "主体身份清晰" in result.prompt
 
 
+async def test_image_prompt_rewrites_provider_sensitive_style_names() -> None:
+    """出图前把具体导演、作品、胶片品牌转写成平台更稳定的视觉描述。"""
+
+    llm = FakePromptLLM("参考王家卫《花样年华》式调色，Wes Anderson 对称构图，Kodak 5219 胶片，{name}。")
+    synthesizer = PromptSynthesizer(llm)
+
+    result = await synthesizer.synthesize_image_prompt(_character_request())
+
+    assert "王家卫" not in result.prompt
+    assert "花样年华" not in result.prompt
+    assert "Wes Anderson" not in result.prompt
+    assert "Kodak 5219" not in result.prompt
+    assert "暖琥珀色都市怀旧影像" in result.prompt
+    assert "精确对称构图" in result.prompt
+    assert "35mm 胶片质感" in result.prompt
+
+
 async def test_video_prompt_interface_is_signature_only_for_this_phase() -> None:
     """Phase 3 只保留视频提示词接口，不接 Seedance。"""
 

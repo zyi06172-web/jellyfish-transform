@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.db import Base
-from app.models.studio import AgentMessage, AgentSession, Character, Project
+from app.models.studio import AgentMessage, AgentSession, Character, Project, ProjectSceneLink, Scene
 from app.models.task import GenerationDeliveryMode, GenerationTask, GenerationTaskStatus
 from app.models.types import (
     AgentMessageKind,
@@ -102,22 +102,36 @@ async def test_auto_elements_chain_calls_existing_steps_in_order_and_prompts_bef
                     costume_id=None,
                 )
             )
+            db.add(
+                Scene(
+                    id="scene-banquet",
+                    name="婚礼宴会厅",
+                    description="暖金吊灯与冷白追光交错的酒店婚礼宴会厅。",
+                    style=project.style,
+                    visual_style=project.visual_style,
+                )
+            )
+            await db.flush()
+            db.add(ProjectSceneLink(project_id=project.id, scene_id="scene-banquet", chapter_id=None, shot_id=None))
             await db.flush()
             return {"chapter_id": chapter_id, "level": "L3", "created_and_linked": 1}
 
         async def fake_prompt(_db: AsyncSession, request: ImagePromptRequest) -> str:
             calls.append("prompt")
             assert request.final_video_spec.aspect_ratio == "9:16"
-            assert request.element.kind == "character"
-            return "女主角色参考图，左脸近景 + 右全身，9:16，无画面文字。"
+            if request.element.kind == "character":
+                return "女主角色参考图，左脸近景 + 右全身，9:16，无画面文字。"
+            assert request.element.kind == "scene"
+            return "婚礼宴会厅场景参考图，9:16，无画面文字。"
 
         async def fake_image(_db: AsyncSession, target: ElementImageTarget, prompt: str) -> str:
             calls.append("image")
-            assert target.kind == "character"
+            assert target.kind in {"character", "scene"}
             assert "无画面文字" in prompt
+            task_id = f"image-task-{len([item for item in calls if item == 'image'])}"
             _db.add(
                 GenerationTask(
-                    id="image-task-1",
+                    id=task_id,
                     mode=GenerationDeliveryMode.async_polling,
                     task_kind="image_generation",
                     status=GenerationTaskStatus.succeeded,
@@ -127,7 +141,7 @@ async def test_auto_elements_chain_calls_existing_steps_in_order_and_prompts_bef
                 )
             )
             await _db.flush()
-            return "image-task-1"
+            return task_id
 
         await execute_agent_auto_elements_chain(
             db,
@@ -146,7 +160,7 @@ async def test_auto_elements_chain_calls_existing_steps_in_order_and_prompts_bef
         assert session is not None
         assert session.current_stage == AgentSessionStage.elements_review
         assert session.status == AgentSessionStatus.waiting_user
-        assert calls == [SCRIPT_DIVIDE_TASK_KIND, SCRIPT_EXTRACT_TASK_KIND, "l3", "prompt", "image"]
+        assert calls == [SCRIPT_DIVIDE_TASK_KIND, SCRIPT_EXTRACT_TASK_KIND, "l3", "prompt", "image", "prompt", "image"]
 
         messages = (
             await db.execute(
