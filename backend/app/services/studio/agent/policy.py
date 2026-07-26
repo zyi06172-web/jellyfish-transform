@@ -28,6 +28,7 @@ INTENT_TO_ACTION: dict[str, AgentActionType] = {
     "generate_audio_layer": AgentActionType.generate_audio_layer,
     "assemble_export": AgentActionType.assemble_export,
     "regenerate_target": AgentActionType.regenerate_target,
+    "regenerate_element_image": AgentActionType.regenerate_target,
 }
 
 ACTION_ALLOWED_STAGE: dict[AgentActionType, frozenset[AgentSessionStage]] = {

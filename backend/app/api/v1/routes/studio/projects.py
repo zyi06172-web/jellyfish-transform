@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
 from app.models.studio import Project
-from app.models.types import AgentSessionStage, ProjectStyle, ProjectVisualStyle
+from app.models.types import AgentActionType, AgentSessionStage, ProjectStyle, ProjectVisualStyle
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, paginated_response, success_response
 from app.schemas.studio.agent_workspace import (
     AgentMessageRead,
@@ -43,7 +43,10 @@ from app.services.studio.agent.home_prompt_analysis import (
     run_home_prompt_analysis_task,
 )
 from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
+from app.services.llm import build_default_text_llm
 from app.services.studio.agent.db_repository import DbAgentRepository
+from app.services.studio.agent.element_regeneration import regenerate_element_image
+from app.services.studio.agent.turn_decision_llm import LLMAgentTurnDecisionLLM
 from app.services.studio.agent.types import AgentTurnCommand, AgentTurnInput
 from app.services.studio.agent.video_creation_agent import VideoCreationAgent
 
@@ -211,7 +214,11 @@ async def handle_project_agent_turn(
             content=body.input.choice_id,
             payload={"choice_id": body.input.choice_id, "idempotency_key": body.idempotency_key},
         )
-    agent = VideoCreationAgent(repository=repository)
+    decision_llm = None
+    if body.input.type == "text" and body.input.text.strip():
+        llm = await build_default_text_llm(db, thinking=False)
+        decision_llm = LLMAgentTurnDecisionLLM(llm)
+    agent = VideoCreationAgent(repository=repository, decision_llm=decision_llm)
     result = await agent.handle_turn(
         AgentTurnCommand(
             project_id=project_id,
@@ -232,6 +239,16 @@ async def handle_project_agent_turn(
             session_id=body.session_id,
             idempotency_key=body.idempotency_key,
         )
+    for index, action in enumerate(result.actions):
+        if action.action_type == AgentActionType.regenerate_target and action.target_type == "character":
+            await regenerate_element_image(
+                db,
+                project_id=project_id,
+                session_id=body.session_id,
+                action_idempotency_key=(
+                    f"{body.idempotency_key}:{action.action_type.value}:{action.target_type}:{action.target_id}:{index}"
+                ),
+            )
     return success_response(
         AgentTurnRead(
             revision=result.revision,

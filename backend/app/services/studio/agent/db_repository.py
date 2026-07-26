@@ -12,6 +12,7 @@ from app.models.studio import (
     AgentCheckpoint,
     AgentMessage,
     AgentSession,
+    Character,
 )
 from app.models.types import (
     AgentActionStatus,
@@ -51,6 +52,7 @@ class DbAgentRepository:
             revision=session.revision,
             confirmed_stages=_stage_set((session.state or {}).get("confirmed_stages")),
             completed_stages=_stage_set((session.state or {}).get("completed_stages")),
+            known_targets=await self._known_targets(project_id),
             running_action_types=frozenset(
                 row.action_type
                 for row in (
@@ -225,6 +227,17 @@ class DbAgentRepository:
     async def _next_message_sequence(self, session_id: str) -> int:
         result = await self._db.execute(select(func.max(AgentMessage.sequence)).where(AgentMessage.session_id == session_id))
         return int(result.scalar_one_or_none() or 0) + 1
+
+    async def _known_targets(self, project_id: str) -> dict[str, frozenset[str]]:
+        characters = (
+            await self._db.execute(select(Character).where(Character.project_id == project_id).order_by(Character.id.asc()))
+        ).scalars().all()
+        character_keys: set[str] = set()
+        for row in characters:
+            character_keys.add(row.id)
+            if row.name:
+                character_keys.add(row.name)
+        return {"character": frozenset(character_keys)}
 
     def _action_idempotency_key(self, planned: PlannedAction, index: int) -> str:
         base = self._command_idempotency_key or _new_id("agent_turn")

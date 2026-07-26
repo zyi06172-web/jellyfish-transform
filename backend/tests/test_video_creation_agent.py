@@ -6,6 +6,7 @@ from app.models.types import AgentActionType, AgentMessageKind, AgentSessionStag
 import app.services.studio.agent as agent_public_api
 from app.services.studio.agent import VideoCreationAgent
 from app.services.studio.agent.repository import InMemoryAgentRepository
+from app.services.studio.agent.turn_decision_llm import LLMAgentTurnDecisionLLM
 from app.services.studio.agent.types import (
     AgentDecision,
     AgentSessionState,
@@ -35,6 +36,28 @@ class FakeDecisionLLM:
         return self.decision
 
 
+@dataclass
+class FakeChatResponse:
+    content: str
+
+
+@dataclass
+class FakeTurnChatModel:
+    calls: int = 0
+    last_messages: list[object] | None = None
+
+    async def ainvoke(self, messages: list[object]) -> FakeChatResponse:
+        self.calls += 1
+        self.last_messages = messages
+        return FakeChatResponse(
+            content=(
+                '{"intent":"regenerate_element_image","target_type":"character","target_id":"沈知夏",'
+                '"arguments":{"user_instruction":"女主不好看换清冷点"},'
+                '"assistant_message":"我会只重生成沈知夏的关键元素图。","confidence":0.93}'
+            )
+        )
+
+
 def _text_command(*, expected_revision: int = 0, text: str = "继续") -> AgentTurnCommand:
     return AgentTurnCommand(
         project_id="project-1",
@@ -53,6 +76,27 @@ def _choice_command(choice_id: str, *, expected_revision: int = 0) -> AgentTurnC
         input=AgentTurnInput(type="choice", choice_id=choice_id),
         idempotency_key=f"choice-{choice_id}",
     )
+
+
+async def test_turn_decision_llm_parses_local_regeneration_intent_and_target() -> None:
+    """生产 LLM 适配器把自然语言局部修改解析为结构化 regenerate_element_image 决策。"""
+
+    chat_model = FakeTurnChatModel()
+    decision = await LLMAgentTurnDecisionLLM(chat_model).decide(
+        _text_command(text="女主不好看换清冷点"),
+        AgentSessionState(
+            project_id="project-1",
+            session_id="session-1",
+            stage=AgentSessionStage.elements_review,
+            known_targets={"character": frozenset({"char-shen", "沈知夏"})},
+        ),
+    )
+
+    assert chat_model.calls == 1
+    assert decision.intent == "regenerate_element_image"
+    assert decision.target_type == "character"
+    assert decision.target_id == "沈知夏"
+    assert decision.arguments["user_instruction"] == "女主不好看换清冷点"
 
 
 def test_agent_public_api_only_exports_video_creation_agent_with_two_methods() -> None:
@@ -277,3 +321,88 @@ async def test_policy_allows_valid_structured_decision_after_guards_pass() -> No
     assert len(result.actions) == 1
     assert result.actions[0].action_type == AgentActionType.generate_element_image
     assert result.actions[0].target_id == "char-1"
+
+
+async def test_regenerate_element_image_intent_targets_existing_character_without_stage_change() -> None:
+    """用户局部重生成角色图时，Policy 只创建 regenerate 动作，不推进/回退阶段。"""
+
+    state = AgentSessionState(
+        project_id="project-1",
+        session_id="session-1",
+        stage=AgentSessionStage.elements_review,
+        status=AgentSessionStatus.waiting_user,
+        revision=4,
+        confirmed_stages=frozenset({AgentSessionStage.intake, AgentSessionStage.spec_review}),
+        completed_stages=frozenset(
+            {
+                AgentSessionStage.storyboard,
+                AgentSessionStage.extract,
+                AgentSessionStage.auto_confirm,
+                AgentSessionStage.elements_gen,
+            }
+        ),
+        known_targets={"character": frozenset({"char-shen", "沈知夏"})},
+    )
+    repository = InMemoryAgentRepository(state)
+    llm = FakeDecisionLLM(
+        AgentDecision(
+            intent="regenerate_element_image",
+            target_type="character",
+            target_id="沈知夏",
+            arguments={"user_instruction": "女主不好看换清冷点"},
+            assistant_message="我会只重生成沈知夏的关键元素图。",
+            confidence=0.92,
+        )
+    )
+    agent = VideoCreationAgent(decision_llm=llm, repository=repository)
+
+    result = await agent.handle_turn(_text_command(expected_revision=4, text="女主不好看换清冷点"))
+
+    assert result.stage == AgentSessionStage.elements_review
+    assert result.revision == 5
+    assert len(result.actions) == 1
+    assert result.actions[0].action_type == AgentActionType.regenerate_target
+    assert result.actions[0].target_type == "character"
+    assert result.actions[0].target_id == "沈知夏"
+    assert result.actions[0].input["user_instruction"] == "女主不好看换清冷点"
+
+
+async def test_regenerate_element_image_rejected_when_target_missing() -> None:
+    """LLM 解析出的局部重生成目标不存在时，Policy 返回澄清卡且不创建动作。"""
+
+    state = AgentSessionState(
+        project_id="project-1",
+        session_id="session-1",
+        stage=AgentSessionStage.elements_review,
+        revision=2,
+        confirmed_stages=frozenset({AgentSessionStage.intake, AgentSessionStage.spec_review}),
+        completed_stages=frozenset(
+            {
+                AgentSessionStage.storyboard,
+                AgentSessionStage.extract,
+                AgentSessionStage.auto_confirm,
+                AgentSessionStage.elements_gen,
+            }
+        ),
+        known_targets={"character": frozenset({"char-shen", "沈知夏"})},
+    )
+    repository = InMemoryAgentRepository(state)
+    llm = FakeDecisionLLM(
+        AgentDecision(
+            intent="regenerate_element_image",
+            target_type="character",
+            target_id="不存在",
+            arguments={"user_instruction": "女主不好看换清冷点"},
+            assistant_message="准备重生成。",
+            confidence=0.88,
+        )
+    )
+    agent = VideoCreationAgent(decision_llm=llm, repository=repository)
+
+    result = await agent.handle_turn(_text_command(expected_revision=2, text="女主不好看换清冷点"))
+
+    assert result.stage == AgentSessionStage.elements_review
+    assert result.revision == 2
+    assert result.actions == []
+    assert result.question_card is not None
+    assert "找不到目标" in result.assistant_message.content

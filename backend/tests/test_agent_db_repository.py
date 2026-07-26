@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import app.models  # noqa: F401
 from app.core.db import Base
-from app.models.studio import AgentCheckpoint, AgentMessage, AgentSession, Project
+from app.models.studio import AgentCheckpoint, AgentMessage, AgentSession, Character, Project
 from app.models.types import (
     AgentCheckpointStatus,
     AgentMessageKind,
@@ -101,6 +101,30 @@ async def test_db_repository_snapshot_restores_real_question_card() -> None:
         assert snapshot.question_card is not None
         assert snapshot.question_card.options[0].effect == "confirm_and_advance"
         assert snapshot.messages[0].content.startswith("请确认成片规格")
+    finally:
+        await db.close()
+        await engine.dispose()
+
+
+async def test_db_repository_loads_character_ids_and_names_as_known_targets() -> None:
+    db, engine = await _build_session()
+    try:
+        await _seed_spec_review_session(db)
+        db.add(
+            Character(
+                id="char-shen",
+                project_id="proj-agent",
+                name="沈知夏",
+                description="清冷女主",
+                style=ProjectStyle.real_people_city,
+                visual_style=ProjectVisualStyle.live_action,
+            )
+        )
+        await db.flush()
+
+        state = await DbAgentRepository(db).load("proj-agent", "session-agent")
+
+        assert state.known_targets["character"] == frozenset({"char-shen", "沈知夏"})
     finally:
         await db.close()
         await engine.dispose()
