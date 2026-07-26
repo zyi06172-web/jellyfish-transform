@@ -8,7 +8,13 @@ import {
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { TabKey } from '../constants'
-import { getChapterShotsPath, getChapterStudioPath, getProjectChaptersPath, getProjectEditorPath } from '../routes'
+import {
+  getChapterShotsPath,
+  getChapterStudioPath,
+  getProjectAssetLibraryPath,
+  getProjectChaptersPath,
+  getProjectEditorPath,
+} from '../routes'
 import { useProject, useChapters } from '../hooks/useProjectData'
 import { ensureHasShotsBeforeShooting } from '../ensureHasShotsBeforeShooting'
 import { getChapterPreparationState } from '../chapterPreparation'
@@ -349,7 +355,7 @@ export function DashboardTab({ onSelectTab }: { onSelectTab: (tab: TabKey) => vo
               </div>
               <Progress percent={75} size="small" showInfo={false} />
             </div>
-            <Button type="link" className="p-0 mt-2" onClick={() => navigate('/asset-library')}>
+            <Button type="link" className="p-0 mt-2" onClick={() => projectId && navigate(getProjectAssetLibraryPath(projectId))}>
               管理资产
             </Button>
           </Card>

@@ -8,7 +8,10 @@ RUN corepack prepare pnpm@9.15.9 --activate
 COPY front/package.json front/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY front/ ./
+COPY front/index.html front/logo.svg front/openapi.json ./
+COPY front/postcss.config.cjs front/tailwind.config.js front/tsconfig.json front/tsconfig.node.json front/vite.config.ts ./
+COPY front/public ./public
+COPY front/src ./src
 RUN pnpm run build
 
 

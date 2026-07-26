@@ -15,6 +15,8 @@ from app.models.studio import (
     PropImage,
     Scene,
     SceneImage,
+    ShotCharacterLink,
+    ShotDetail,
 )
 from app.schemas.studio.projects import (
     AssetLibraryItemRead,
@@ -40,6 +42,7 @@ async def _character_items(db: AsyncSession, *, project_id: str) -> list[AssetLi
     ).scalars().all()
     image_map = await _images_by_parent(db, image_model=CharacterImage, parent_field_name="character_id", parent_ids=[row.id for row in rows])
     prop_relations = await _character_prop_relations(db, character_ids=[row.id for row in rows])
+    scene_relations = await _character_scene_relations(db, character_ids=[row.id for row in rows])
     return [
         AssetLibraryItemRead(
             id=row.id,
@@ -48,7 +51,7 @@ async def _character_items(db: AsyncSession, *, project_id: str) -> list[AssetLi
             description=row.description,
             bible=row.bible_json or {},
             reference_images=image_map.get(row.id, []),
-            relations=prop_relations.get(row.id, []),
+            relations=prop_relations.get(row.id, []) + scene_relations.get(row.id, []),
         )
         for row in rows
     ]
@@ -156,6 +159,47 @@ async def _character_prop_relations(db: AsyncSession, *, character_ids: list[str
                 target_type="prop",
                 target_id=row.prop_id,
                 label=row.note or "",
+            )
+        )
+    return result
+
+
+async def _character_scene_relations(db: AsyncSession, *, character_ids: list[str]) -> dict[str, list[AssetLibraryRelationRead]]:
+    if not character_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(ShotCharacterLink.character_id, Scene.id, Scene.name)
+            .join(ProjectSceneLink, ProjectSceneLink.shot_id == ShotCharacterLink.shot_id)
+            .join(Scene, Scene.id == ProjectSceneLink.scene_id)
+            .where(ShotCharacterLink.character_id.in_(character_ids))
+            .distinct()
+            .order_by(ShotCharacterLink.character_id.asc(), Scene.name.asc())
+        )
+    ).all()
+    detail_rows = (
+        await db.execute(
+            select(ShotCharacterLink.character_id, Scene.id, Scene.name)
+            .join(ShotDetail, ShotDetail.id == ShotCharacterLink.shot_id)
+            .join(Scene, Scene.id == ShotDetail.scene_id)
+            .where(ShotCharacterLink.character_id.in_(character_ids))
+            .distinct()
+            .order_by(ShotCharacterLink.character_id.asc(), Scene.name.asc())
+        )
+    ).all()
+    result: dict[str, list[AssetLibraryRelationRead]] = {}
+    seen: set[tuple[str, str]] = set()
+    for character_id, scene_id, scene_name in [*rows, *detail_rows]:
+        key = (str(character_id), str(scene_id))
+        if key in seen:
+            continue
+        seen.add(key)
+        result.setdefault(str(character_id), []).append(
+            AssetLibraryRelationRead(
+                relation_type="appears_in_scene",
+                target_type="scene",
+                target_id=str(scene_id),
+                label=str(scene_name or ""),
             )
         )
     return result

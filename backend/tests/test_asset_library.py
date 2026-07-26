@@ -21,6 +21,14 @@ from app.models.studio import (
     PropImage,
     Scene,
     SceneImage,
+    Shot,
+    ShotCharacterLink,
+    ShotDetail,
+    CameraAngle,
+    CameraMovement,
+    CameraShotType,
+    Chapter,
+    VFXType,
 )
 from app.services.studio.asset_library import build_project_asset_library
 
@@ -64,6 +72,28 @@ async def test_asset_library_returns_project_assets_with_bible_images_and_relati
                 ProjectPropLink(project_id=project.id, prop_id=prop.id, chapter_id=None, shot_id=None),
             ]
         )
+        db.add(Chapter(id="ch1", project_id=project.id, index=1, title="第一集"))
+        db.add(Shot(id="shot1", chapter_id="ch1", index=1, title="婚礼现场"))
+        db.add(
+            ShotDetail(
+                id="shot1",
+                camera_shot=CameraShotType.ms,
+                angle=CameraAngle.eye_level,
+                movement=CameraMovement.static,
+                scene_id=scene.id,
+                duration=5,
+                mood_tags=[],
+                atmosphere="",
+                follow_atmosphere=True,
+                has_bgm=False,
+                vfx_type=VFXType.none,
+                vfx_note="",
+                description="",
+                action_beats=[],
+            )
+        )
+        db.add(ShotCharacterLink(shot_id="shot1", character_id=character.id, index=0))
+        db.add(ProjectSceneLink(project_id=project.id, scene_id=scene.id, chapter_id="ch1", shot_id="shot1"))
         db.add_all(
             [
                 FileItem(id="file-char", type=FileType.image, name="沈知夏四视图", storage_key="generated/char.jpeg"),
@@ -92,6 +122,10 @@ async def test_asset_library_returns_project_assets_with_bible_images_and_relati
         assert library.characters[0].name == "沈知夏"
         assert library.characters[0].bible["wearable_accessories"][0]["name"] == "胸针"
         assert library.characters[0].reference_images[0].url == "/api/v1/studio/files/file-char/download"
+        assert any(
+            relation.relation_type == "appears_in_scene" and relation.target_id == scene.id
+            for relation in library.characters[0].relations
+        )
         assert library.scenes[0].name == "婚礼大堂"
         assert library.scenes[0].reference_images[0].url == "/api/v1/studio/files/file-scene/download"
         assert library.props[0].name == "捧花"

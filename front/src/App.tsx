@@ -5,6 +5,7 @@ import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import ProjectLobby from './pages/aiStudio/project/ProjectLobby'
 import ProjectWorkbench from './pages/aiStudio/project/ProjectWorkbench'
+import ProjectAssetLibraryPage from './pages/aiStudio/project/ProjectAssetLibraryPage'
 import RoleDetailPage from './pages/aiStudio/project/ProjectWorkbench/RoleDetailPage'
 import ChapterStudio from './pages/aiStudio/chapter/ChapterStudio'
 import AssetManager from './pages/aiStudio/asset-library/AssetManager'
@@ -31,6 +32,7 @@ const App: React.FC = () => {
           <Route index element={<Navigate to="/projects" replace />} />
           <Route path="projects" element={<ProjectLobby />} />
           <Route path="projects/:projectId" element={<ProjectWorkbench />} />
+          <Route path="projects/:projectId/asset-library" element={<ProjectAssetLibraryPage />} />
           <Route path="projects/:projectId/roles/:characterId/edit" element={<RoleDetailPage />} />
           <Route path="projects/:projectId/chapters/:chapterId/prep/*" element={<Navigate to="../shots" replace />} />
           <Route path="projects/:projectId/chapters/:chapterId/studio" element={<ChapterStudio />} />

@@ -18,3 +18,6 @@ export function getProjectEditorPath(projectId: string) {
   return `/projects/${projectId}/editor`
 }
 
+export function getProjectAssetLibraryPath(projectId: string) {
+  return `/projects/${projectId}/asset-library`
+}
