@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { TaskRuntimeProvider } from '../pages/aiStudio/components/TaskRuntimeProvider'
 
@@ -12,7 +12,8 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { key: 'home', label: '主页', href: '/projects', icon: <HomeOutlined /> },
-  { key: 'projects', label: '项目', href: '/projects', icon: <ProjectOutlined /> },
+  { key: 'projects', label: '项目', href: '/canvases', icon: <ProjectOutlined /> },
+  { key: 'assets', label: '资产库', href: '/asset-library', icon: <AppstoreOutlined /> },
   { key: 'tv', label: '社区TV', href: '/community-tv', icon: <PlaySquareOutlined /> },
 ]
 
@@ -22,6 +23,8 @@ const MainLayout: React.FC = () => {
 
   const activeKey = useMemo(() => {
     if (location.pathname.startsWith('/community-tv')) return 'tv'
+    if (location.pathname.startsWith('/asset-library')) return 'assets'
+    if (location.pathname.startsWith('/canvases')) return 'projects'
     if (location.pathname === '/projects') return 'home'
     if (location.pathname.startsWith('/projects/')) return 'projects'
     return 'home'
@@ -29,10 +32,10 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="flova-shell-bg flex h-screen overflow-hidden bg-black text-white">
-      <aside className="relative z-20 flex w-[96px] shrink-0 flex-col items-center bg-transparent px-3 py-6">
+      <aside className="relative z-20 flex w-[96px] shrink-0 flex-col items-center bg-black px-3 py-6">
         <Link to="/projects" className="mb-9 flex flex-col items-center gap-2 no-underline hover:no-underline">
-          <img src="/nuwa-logo.svg" alt="女娲" className="h-12 w-12 rounded-[18px] shadow-[0_0_22px_rgba(120,220,255,.18)]" />
-          <span className="text-[10px] font-semibold tracking-normal text-white/66">女娲</span>
+          <img src="/nuwa-logo.svg" alt="女娲" className="h-12 w-12 rounded-[18px] shadow-[0_0_26px_rgba(120,220,255,.22)]" />
+          <span className="text-[10px] font-semibold tracking-normal text-white">女娲</span>
         </Link>
 
         <nav className="flex w-full flex-col items-center gap-3">
@@ -42,10 +45,10 @@ const MainLayout: React.FC = () => {
               <Link
                 key={item.key}
                 to={item.href}
-                className={`group flex w-full flex-col items-center gap-1.5 rounded-[22px] px-2 py-2.5 text-center no-underline transition hover:no-underline ${
+                className={`nuwa-side-link group flex w-full flex-col items-center gap-1.5 rounded-[22px] px-2 py-2.5 text-center no-underline transition hover:no-underline ${
                   active
-                    ? 'bg-white/[.10] text-white shadow-[0_0_22px_rgba(120,220,255,.13)]'
-                    : 'text-white/42 hover:bg-white/[.06] hover:text-white/78'
+                    ? 'nuwa-side-link-active text-white shadow-[0_0_22px_rgba(120,220,255,.16)]'
+                    : 'text-white hover:text-white'
                 }`}
               >
                 <span className="text-[21px] leading-none">{item.icon}</span>

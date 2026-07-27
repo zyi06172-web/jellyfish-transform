@@ -1,16 +1,5 @@
 import type { ProjectRead } from '../../../services/generated'
 
-export type SkillMode = 'long_video' | 'commercial' | 'short_drama'
-
-export type SkillCard = {
-  key: SkillMode
-  title: string
-  subtitle: string
-  accent: string
-  icon: string
-  hot?: boolean
-}
-
 export type HomeProjectCard = {
   id: string
   name: string
@@ -19,31 +8,19 @@ export type HomeProjectCard = {
   progress: number
 }
 
-export const HOME_SKILL_CARDS: SkillCard[] = [
-  {
-    key: 'long_video',
-    title: '长视频制作',
-    subtitle: '完整叙事、系列节目和品牌纪录片',
-    accent: 'linear-gradient(135deg, rgba(33,150,243,.16), rgba(76,217,100,.10))',
-    icon: '🎬',
-  },
-  {
-    key: 'commercial',
-    title: '商业广告制作',
-    subtitle: '产品卖点、镜头脚本和投放素材',
-    accent: 'linear-gradient(135deg, rgba(255,149,0,.24), rgba(0,122,255,.12))',
-    icon: '🧴',
-    hot: true,
-  },
-  {
-    key: 'short_drama',
-    title: '短剧制作',
-    subtitle: '爽点、反转、付费卡点和竖屏分镜',
-    accent: 'linear-gradient(135deg, rgba(175,82,222,.20), rgba(90,200,250,.13))',
-    icon: '🎭',
-    hot: true,
-  },
-]
+export const DEFAULT_CANVAS_PROMPT =
+  '新建女娲创作画布：请先创建一个可继续补充剧本、角色和资产的空白视频项目。'
+
+export const DEFAULT_CANVAS_SKILL_KEY = 'short_drama'
+
+/** 清理历史首页创建时写入描述的技能/模型元信息，画布卡片只展示创作内容。 */
+export function cleanHomeProjectDescription(description?: string | null) {
+  return (description ?? '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('技能：') && !line.startsWith('模型：'))
+    .join('\n')
+}
 
 /** 生成首页创建幂等键，让重复提交不会重复创建项目。 */
 export function createHomePromptIdempotencyKey() {
@@ -63,7 +40,7 @@ export function toHomeProjectCard(project: ProjectRead): HomeProjectCard {
   return {
     id: project.id,
     name: project.name,
-    description: project.description ?? '',
+    description: cleanHomeProjectDescription(project.description),
     updatedAt,
     progress: project.progress ?? 0,
   }

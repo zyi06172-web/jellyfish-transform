@@ -1,13 +1,28 @@
 <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="200" rx="44" fill="#000000"/>
-  <path d="M100 27L116.8 72.8L163 89.6L116.8 106.4L100 152L83.2 106.4L37 89.6L83.2 72.8L100 27Z" fill="url(#paint0_linear)"/>
-  <path d="M64 142C82 160 118 160 136 142" stroke="#EAFBFF" stroke-width="8" stroke-linecap="round"/>
-  <path d="M73 64C88 50 112 50 127 64" stroke="#EAFBFF" stroke-width="8" stroke-linecap="round"/>
-  <path d="M100 58V132" stroke="#EAFBFF" stroke-width="7" stroke-linecap="round"/>
-  <circle cx="100" cy="90" r="18" fill="#000" fill-opacity=".72"/>
-  <text x="100" y="184" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700" fill="#EAFBFF">女娲</text>
+  <rect width="200" height="200" rx="48" fill="#000000"/>
+  <circle cx="100" cy="100" r="60" fill="url(#paint0_radial)" opacity=".42"/>
+  <path d="M34 111C54 61 121 35 165 61C185 73 182 94 156 101C119 111 72 105 43 86" stroke="url(#paint1_linear)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M166 89C146 139 79 165 35 139C15 127 18 106 44 99C81 89 128 95 157 114" stroke="url(#paint2_linear)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M100 35L113.4 80.4L159 94L113.4 107.6L100 153L86.6 107.6L41 94L86.6 80.4L100 35Z" fill="url(#paint3_linear)"/>
+  <path d="M100 64L108 89L133 97L108 105L100 130L92 105L67 97L92 89L100 64Z" fill="#FFFFFF"/>
+  <circle cx="100" cy="97" r="10" fill="#000000" opacity=".78"/>
   <defs>
-    <linearGradient id="paint0_linear" x1="37" y1="27" x2="163" y2="152" gradientUnits="userSpaceOnUse">
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(60)">
+      <stop stop-color="#FFFFFF" stop-opacity=".82"/>
+      <stop offset=".42" stop-color="#7DD3FC" stop-opacity=".36"/>
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paint1_linear" x1="32" y1="111" x2="178" y2="66" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2DD4BF"/>
+      <stop offset=".48" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
+    </linearGradient>
+    <linearGradient id="paint2_linear" x1="168" y1="89" x2="22" y2="134" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FB7185"/>
+      <stop offset=".48" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#7DD3FC"/>
+    </linearGradient>
+    <linearGradient id="paint3_linear" x1="41" y1="35" x2="159" y2="153" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFFFFF"/>
       <stop offset=".36" stop-color="#7DD3FC"/>
       <stop offset=".68" stop-color="#A78BFA"/>
