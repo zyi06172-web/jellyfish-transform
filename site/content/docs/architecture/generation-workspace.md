@@ -204,6 +204,18 @@ backend/app/services/studio/generation/
   - 只画当前一秒画面
   - 不画分镜框、格线、编号、字幕、对白、水印或任何画面文字
 
+### Agent 工作台 UI
+
+当前项目工作台左侧面板会直接消费 `AgentWorkspaceSnapshotRead`：
+
+- 阶段进度按 `confirmed_stages` / `completed_stages` / `stage` 渲染
+- `agent_messages.kind = task_update` 会显示为自动链进度时间线
+- 故事板 artifact 中的 `pages[*]` 会渲染为 6 格故事板审片视图
+- `pages[*].shots` 会渲染为 2-3 个镜头分组卡，展示格号范围、时长、景别、角度、运镜、参考帧模式、运动描述、朝向和构图锚点
+- `panels[*].six_elements_for_video_model` 会渲染为每格六要素摘要，但不作为画面文字
+- 视频生成提示词预览弹窗会展示镜头执行卡、参考帧模式、时长、画幅、镜头语言、资产锁定、负向约束和最终 Seedance prompt
+- 项目资产库预览弹窗会展示角色 / 场景参考图版本槽位；角色局部重生成会提交 Agent text turn，并回到工作台查看后续进度
+
 ### `asset_image`
 
 当前资产图片生成已开始迁移到：

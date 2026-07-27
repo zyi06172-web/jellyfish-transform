@@ -362,6 +362,15 @@ function getKeyframeRenderStatusMeta(state: GenerationDraftState) {
   }
 }
 
+function getVideoReferenceModeLabel(mode: VideoReferenceMode): string {
+  if (mode === 'first') return '首帧'
+  if (mode === 'last') return '尾帧'
+  if (mode === 'key') return '关键帧'
+  if (mode === 'first_last') return '首尾帧'
+  if (mode === 'first_last_key') return '首尾+关键帧'
+  return '纯文本'
+}
+
 function applyTaskCancelState(
   currentTask: RelationTaskState | null,
   data?: { task_id?: string | null; status?: string | null; cancel_requested?: boolean | null } | null,
@@ -6334,6 +6343,75 @@ function Inspector(props: {
             </div>
           ) : (
             <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                      <VideoCameraOutlined />
+                      镜头执行卡
+                    </div>
+                    <Tag color={videoReferenceMode === 'text_only' ? 'default' : 'blue'}>
+                      {getVideoReferenceModeLabel(videoReferenceMode)}
+                    </Tag>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-slate-400">时长</div>
+                      <div className="mt-1 font-medium text-slate-700">{videoPromptPreviewPack?.camera?.duration ?? shotDetail?.duration ?? '未设置'} 秒</div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-slate-400">画幅</div>
+                      <div className="mt-1 font-medium text-slate-700">{resolveVideoRatioForRequest() || '未设置'}</div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-slate-400">景别</div>
+                      <div className="mt-1 font-medium text-slate-700">{videoPromptPreviewPack?.camera?.camera_shot || '未设置'}</div>
+                    </div>
+                    <div className="rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-slate-400">运镜</div>
+                      <div className="mt-1 font-medium text-slate-700">{videoPromptPreviewPack?.camera?.movement || '未设置'}</div>
+                    </div>
+                    <div className="col-span-2 rounded-md bg-slate-50 px-3 py-2">
+                      <div className="text-slate-400">角度</div>
+                      <div className="mt-1 font-medium text-slate-700">{videoPromptPreviewPack?.camera?.angle || '未设置'}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-3">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                    <PictureOutlined />
+                    资产锁定
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <div className="mb-1 text-slate-400">角色</div>
+                      <div className="flex flex-wrap gap-1">
+                        {(videoPromptPreviewPack?.characters ?? []).length ? (
+                          videoPromptPreviewPack?.characters.map((item, index) => (
+                            <Tag key={`${item.type}:${item.name}:${item.file_id ?? index}`} className="mr-0 rounded-full border-0">{item.name}</Tag>
+                          ))
+                        ) : (
+                          <span className="text-slate-400">暂无角色资产</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-slate-400">场景</div>
+                      {videoPromptPreviewPack?.scene ? (
+                        <Tag className="mr-0 rounded-full border-0">{videoPromptPreviewPack.scene.name}</Tag>
+                      ) : (
+                        <span className="text-slate-400">暂无场景资产</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="mb-1 text-slate-400">负向约束</div>
+                      <div className="line-clamp-2 rounded-md bg-slate-50 px-3 py-2 text-slate-600">
+                        {videoPromptPreviewPack?.negative_prompt || '默认负向约束会在后端补齐'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-600">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -6451,7 +6529,15 @@ function Inspector(props: {
                 )}
               </div>
               <div>
-                <div className="text-xs text-gray-500 mb-2">提示词（可编辑）</div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-medium text-gray-700">最终运动提示词（可编辑）</div>
+                    <div className="mt-1 text-[11px] text-gray-500">
+                      未手写时由后端 LLM 合成；提交时这段文本会作为 Seedance 主提示词。
+                    </div>
+                  </div>
+                  <Tag className="mr-0 rounded-full border-0 bg-slate-100">Seedance prompt</Tag>
+                </div>
                 <Input.TextArea
                   rows={10}
                   value={videoPromptPreviewDraft}

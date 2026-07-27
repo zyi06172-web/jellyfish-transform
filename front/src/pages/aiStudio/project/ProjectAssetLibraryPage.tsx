@@ -8,11 +8,12 @@ import {
   ReloadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Empty, Modal, Skeleton, Space, Tag, Typography, message } from 'antd'
+import { Alert, Button, Empty, Input, Modal, Skeleton, Space, Tag, Typography, message } from 'antd'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   StudioProjectsService,
   type AssetLibraryItemRead,
+  type AssetLibraryReferenceImageRead,
   type AssetLibraryRelationRead,
   type ProjectAssetLibraryRead,
 } from '../../../services/generated'
@@ -27,6 +28,7 @@ type CanvasNode = {
   title: string
   subtitle?: string
   imageUrl?: string
+  referenceImages?: AssetLibraryReferenceImageRead[]
   bible?: Record<string, unknown>
   scene?: AssetLibraryItemRead
 }
@@ -73,6 +75,13 @@ function primaryImageUrl(item: AssetLibraryItemRead): string | undefined {
   const images = item.reference_images ?? []
   const primary = images.find((image) => image.is_primary) ?? images[0]
   return resolveAssetUrl(primary?.url || primary?.file_id)
+}
+
+function createTurnIdempotencyKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `asset_library_turn_${crypto.randomUUID()}`
+  }
+  return `asset_library_turn_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
 function bibleSummary(bible?: Record<string, unknown>): string {
@@ -141,6 +150,7 @@ function buildCanvas(library: ProjectAssetLibraryRead | null): {
         title: character.name,
         subtitle: character.description,
         imageUrl: primaryImageUrl(character),
+        referenceImages: character.reference_images ?? [],
         bible: character.bible,
       },
       {
@@ -166,6 +176,7 @@ function buildCanvas(library: ProjectAssetLibraryRead | null): {
         title: relatedScene?.name || '所属场景',
         subtitle: relatedScene?.description || '暂无镜头场景关系',
         imageUrl: relatedScene ? primaryImageUrl(relatedScene) : undefined,
+        referenceImages: relatedScene?.reference_images ?? [],
         scene: relatedScene,
       },
     )
@@ -209,6 +220,9 @@ const ProjectAssetLibraryPage = () => {
   const [positions, setPositions] = useState<Record<string, Point>>({})
   const [dragging, setDragging] = useState<DragState | null>(null)
   const [previewNode, setPreviewNode] = useState<CanvasNode | null>(null)
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [regenerateInstruction, setRegenerateInstruction] = useState('')
+  const [regenerateSubmitting, setRegenerateSubmitting] = useState(false)
 
   const canvas = useMemo(() => buildCanvas(library), [library])
   const nodesById = useMemo(() => new Map(canvas.nodes.map((node) => [node.id, node])), [canvas.nodes])
@@ -263,6 +277,49 @@ const ProjectAssetLibraryPage = () => {
   const characterForPreview = previewNode
     ? canvas.nodes.find((node) => node.kind === 'character' && node.characterId === previewNode.characterId)
     : null
+  const previewReferenceImages = characterForPreview?.referenceImages ?? previewNode?.referenceImages ?? []
+  const activePreviewImageUrl = previewImageUrl || characterForPreview?.imageUrl || previewNode?.imageUrl || null
+
+  useEffect(() => {
+    setPreviewImageUrl(null)
+    setRegenerateInstruction('')
+  }, [previewNode?.id])
+
+  const submitRegenerateTurn = async () => {
+    if (!projectId || !previewNode) return
+    const instruction = regenerateInstruction.trim()
+    if (!instruction) {
+      message.warning('请输入局部重生成要求')
+      return
+    }
+    setRegenerateSubmitting(true)
+    try {
+      const snapshot = await StudioProjectsService.getProjectWorkspaceApiV1StudioProjectsProjectIdWorkspaceGet({ projectId })
+      const data = snapshot.data
+      if (!data?.session_id) {
+        message.error('当前项目没有可用 Agent session')
+        return
+      }
+      await StudioProjectsService.handleProjectAgentTurnApiV1StudioProjectsProjectIdAgentTurnsPost({
+        projectId,
+        requestBody: {
+          session_id: data.session_id,
+          expected_revision: data.revision,
+          idempotency_key: createTurnIdempotencyKey(),
+          input: {
+            type: 'text',
+            text: `局部重生成角色「${previewNode.title}」（target=${previewNode.characterId}）：${instruction}`,
+          },
+        },
+      })
+      message.success('已提交局部重生成请求，回到工作台查看进度')
+      navigate(`/projects/${projectId}`)
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : '局部重生成提交失败')
+    } finally {
+      setRegenerateSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-full bg-[#f7f8fa]">
@@ -401,11 +458,34 @@ const ProjectAssetLibraryPage = () => {
         {previewNode ? (
           <div className="grid gap-5 md:grid-cols-[420px_1fr]">
             <div className="rounded-lg border border-black/10 bg-zinc-50 p-3">
-              {characterForPreview?.imageUrl ? (
-                <img src={characterForPreview.imageUrl} alt={characterForPreview.title} className="max-h-[70vh] w-full object-contain" />
+              {activePreviewImageUrl ? (
+                <img src={activePreviewImageUrl} alt={previewNode.title} className="max-h-[70vh] w-full object-contain" />
               ) : (
                 <div className="flex h-72 items-center justify-center text-zinc-400">暂无四视图</div>
               )}
+              {previewReferenceImages.length ? (
+                <div className="mt-3">
+                  <div className="mb-2 text-xs font-semibold text-zinc-500">版本槽位</div>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {previewReferenceImages.map((image, index) => {
+                      const url = resolveAssetUrl(image.url || image.file_id)
+                      if (!url) return null
+                      return (
+                        <button
+                          key={`${image.file_id ?? image.url ?? index}`}
+                          type="button"
+                          className={`h-16 w-12 shrink-0 overflow-hidden rounded-md border bg-white p-0 ${
+                            activePreviewImageUrl === url ? 'border-zinc-950' : 'border-black/10'
+                          }`}
+                          onClick={() => setPreviewImageUrl(url)}
+                        >
+                          <img src={url} alt={`版本 ${index + 1}`} className="h-full w-full object-cover" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
             <div className="min-w-0 space-y-4">
               <div>
@@ -417,16 +497,29 @@ const ProjectAssetLibraryPage = () => {
               <pre className="max-h-[52vh] overflow-auto rounded-md bg-zinc-950 p-4 text-xs leading-5 text-zinc-100">
                 {JSON.stringify(previewNode.bible ?? {}, null, 2)}
               </pre>
+              <div className="rounded-lg border border-black/10 bg-white p-4">
+                <Typography.Title level={5} className="!mb-1">
+                  局部重生成
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  只为该角色生成新版本图，不回退阶段，不影响其他元素。
+                </Typography.Text>
+                <Input.TextArea
+                  className="mt-3"
+                  value={regenerateInstruction}
+                  onChange={(event) => setRegenerateInstruction(event.target.value)}
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  placeholder="例如：女主不好看，换清冷点；胸针更明显但仍别在胸前"
+                />
+              </div>
               <Space wrap>
                 <Button
                   type="primary"
                   icon={<ReloadOutlined />}
-                  onClick={() => {
-                    message.info('已进入局部重生成入口：在 Agent 工作台输入要调整的角色气质或局部细节即可。')
-                    if (projectId) navigate(`/projects/${projectId}?agentAction=regenerate_element_image&target=${previewNode.characterId}`)
-                  }}
+                  loading={regenerateSubmitting}
+                  onClick={() => void submitRegenerateTurn()}
                 >
-                  局部重生成
+                  提交局部重生成
                 </Button>
                 <Button onClick={() => setPreviewNode(null)}>关闭</Button>
               </Space>
