@@ -29,6 +29,10 @@ from app.services.studio.image_task_runner import create_image_task_and_link, ru
 from app.services.studio.image_tasks import resolve_front_image_ref
 from app.utils.files import create_file_from_url_or_b64
 
+STORYBOARD_PAGE_CONTENT_SECONDS = 5
+STORYBOARD_PAGE_TOTAL_PANELS = 6
+STORYBOARD_PAGE_TARGET_RATIO = "16:9"
+
 
 @dataclass(slots=True)
 class StoryboardSpec:
@@ -57,6 +61,8 @@ class StoryboardPanelSpec:
     shot_title: str
     one_sentence_summary: str
     six_elements: dict[str, Any]
+    second: int | None = None
+    is_blank: bool = False
 
 
 @dataclass(slots=True)
@@ -87,7 +93,12 @@ async def generate_hand_drawn_storyboard_page_for_chapter(
     reference_scene_id: str | None = None,
     run_inline: bool = False,
 ) -> StoryboardPageGenerationResult:
-    """一次 Seedream 调用生成一页 N 格电影手绘故事板。"""
+    """一次 Seedream 调用生成一页 5 秒档电影手绘故事板。
+
+    章节可以包含任意数量镜头，但故事板 v2 固定输出 6 格：前 5 格按时间顺序
+    表示第 1-5 秒画面，第 6 格为空白结束格。这样下游视频模型不会把结束
+    留白误读成一个需要拍摄的镜头。
+    """
 
     shots = await _load_chapter_shots(db, project_id=project_id, chapter_id=chapter_id)
     if not shots:
@@ -124,7 +135,7 @@ async def generate_hand_drawn_storyboard_page_for_chapter(
         relation_entity_id=chapter_id,
         prompt=spec.prompt,
         images=refs,
-        target_ratio="9:16",
+        target_ratio=STORYBOARD_PAGE_TARGET_RATIO,
         resolution_profile="standard",
         purpose="video_reference",
         render_context={
@@ -132,7 +143,9 @@ async def generate_hand_drawn_storyboard_page_for_chapter(
             "project_id": project_id,
             "chapter_id": chapter_id,
             "panel_count": spec.panel_count,
-            "six_elements_by_panel": [_panel_payload(panel) for panel in panels],
+            "duration_seconds": STORYBOARD_PAGE_CONTENT_SECONDS,
+            "blank_panel_index": STORYBOARD_PAGE_TOTAL_PANELS,
+            "six_elements_by_panel": [_panel_payload(panel) for panel in spec.panels],
             "reference_character_id": reference_character.id if reference_character is not None else None,
             "reference_scene_id": reference_scene.id if reference_scene is not None else None,
         },
@@ -319,14 +332,14 @@ def build_hand_drawn_storyboard_page_spec(
     reference_character: Character | None,
     reference_scene: Scene | None,
 ) -> StoryboardPageSpec:
-    sorted_panels = sorted(panels, key=lambda panel: panel.shot_index)
-    panel_count = len(sorted_panels)
+    normalized_panels = _normalize_five_second_storyboard_panels(panels)
+    panel_count = len(normalized_panels)
     prompt = _storyboard_page_prompt(
-        panels=sorted_panels,
+        panels=normalized_panels,
         reference_character=reference_character,
         reference_scene=reference_scene,
     )
-    return StoryboardPageSpec(chapter_id=chapter_id, panel_count=panel_count, panels=sorted_panels, prompt=prompt)
+    return StoryboardPageSpec(chapter_id=chapter_id, panel_count=panel_count, panels=normalized_panels, prompt=prompt)
 
 
 async def _load_chapter_shots(db: AsyncSession, *, project_id: str, chapter_id: str) -> list[Shot]:
@@ -440,34 +453,82 @@ def _storyboard_page_prompt(
 ) -> str:
     character_bible = reference_character.bible_json if reference_character is not None else {}
     scene_text = reference_scene.description if reference_scene is not None else ""
-    layout = _storyboard_grid_layout(len(panels))
-    panel_lines = "\n".join(
-        f"{panel.shot_index}. {panel.shot_title}｜图下可见一句话：{panel.one_sentence_summary}｜画面要点：{panel.six_elements['shooting_method']['motion_process']}"
-        for panel in panels
-    )
+    panel_lines = "\n".join(_storyboard_panel_prompt_line(panel) for panel in panels)
     return (
-        f"生成一张电影导演用手绘故事板页，9:16 竖图，一页纸内清晰分成 {len(panels)} 个分镜格。"
+        "专业电影分镜故事板，一整页，16:9 横图，铅笔手绘线稿风格，黑白，分镜格线干净利落。"
+        f"版面固定为 {STORYBOARD_PAGE_TOTAL_PANELS} 格，严格 2 行 × 3 列横向网格，严格按时间顺序从左到右、从上到下排列；第一行从左到右是 1、2、3，第二行从左到右是 4、5、6；禁止排成 2 列 × 3 行，禁止把 3 和 4 的位置交换。"
         "脚本忠实度是最高优先级：严格忠实已给出的镜头内容，只做视觉化和构图表达；禁止自行扩展、改写、补写或添加镜头清单里没有的人物、事件、台词、道具、机构和反转；剧情要紧凑，不注水。"
-        f"布局要求：使用专业电影分镜脚本排版，{layout}；每个格子边框清楚，必须严格按照 1→2→3→4→... 的时间顺序从上到下、从左到右排列，第1格是剧情开头，最后一格是结尾，中间按时间推进，不能跳序、倒序或打断叙事流。"
-        "每个分镜格左上角必须标出清晰可见的格号数字 1、2、3、4...，像真实电影分镜脚本编号；编号只放在左上角，不遮挡主体。"
-        "格内是该镜头手绘分镜，格子下方留白写一句中文短总结。"
-        "每格内部必须有红色箭头表示身体/手部运动，蓝色箭头表示摄像机运动，绿色小标记表示构图重点。"
+        "第 1-5 格各代表 1 秒画面时间，必须有内容并按时序推进；同一持续状态可以跨格 hold，相邻格可近乎同构，只做细微推进，不硬凑新剧情。"
+        "第 6 格是空白结束格：留空，不画人物/场景/道具/箭头，不加说明，不渲染任何内容。"
+        "每个非空分镜格左上角必须标出清晰可见的阿拉伯数字格号 1、2、3、4、5；第 6 格左上角只标数字 6。编号像真实电影分镜脚本编号，只放左上角，不遮挡主体。"
+        "第 1-5 格的正下方各留一行简短中文说明；第 6 格正下方不写说明。"
+        "每个非空格内部必须按镜头语言体现景别/角度/运镜；红色箭头表示人物/肢体运动，蓝色箭头表示摄像机运动，绿色小标记表示构图/取景。"
         "红/蓝/绿标记只能放在格内画面上；六要素结构化信息不要写进图里。"
-        "允许每格左上角格号数字和格子下方一句中文总结，除此之外不要标题、对白、字幕、水印、长段说明或技术参数。"
-        "整体风格：黑白铅笔手绘、灰阶阴影、纸面扫描质感、电影预演故事板，不追求脸部精细，重点是构图和运动。"
+        "除格号和第 1-5 格图下一行说明外，画面内不要任何其他文字、标题、对白、字幕、水印、长段说明或技术参数。"
+        "整体参考真实电影分镜脚本与抖音手绘故事板：线条利落、构图专业、剧情紧凑。"
         f"逐格内容如下：\n{panel_lines}\n"
         f"角色一致性参考（只用于外形，不写字）：{character_bible}。"
         f"场景一致性参考（只用于空间，不写字）：{scene_text}。"
-        "请保证每格下方的一句话短、可读、紧贴对应格子，所有格子构图互不混杂。"
+        "角色与场景严格参照参考图，人物长相、服装、场景保持一致。请保证第 1-5 格下方的一句话短、可读、紧贴对应格子，所有格子构图互不混杂。"
     )
 
 
-def _storyboard_grid_layout(panel_count: int) -> str:
-    if panel_count <= 4:
-        return f"2列×{max(1, (panel_count + 1) // 2)}行网格"
-    if panel_count <= 8:
-        return f"2列×{(panel_count + 1) // 2}行网格"
-    return f"3列×{(panel_count + 2) // 3}行网格"
+def _storyboard_panel_prompt_line(panel: StoryboardPanelSpec) -> str:
+    """把单格结构化数据压成给图片模型读取的一行内容。"""
+
+    if panel.is_blank:
+        return f"{panel.shot_index}. 空白格｜留空，不画内容、不加说明｜六要素为空，不生成箭头或构图标记"
+    shooting_method = panel.six_elements.get("shooting_method", {})
+    camera = panel.six_elements.get("camera", {})
+    shot_size = panel.six_elements.get("shot_size", {})
+    return (
+        f"{panel.shot_index}. 第 {panel.second} 秒：{panel.shot_title}"
+        f"｜图下可见一句话：{panel.one_sentence_summary}"
+        f"｜镜头语言：{shot_size.get('value', 'MS')} / {camera.get('value', 'STATIC')}"
+        f"｜画面要点：{shooting_method.get('motion_process', '')}"
+    )
+
+
+def _normalize_five_second_storyboard_panels(panels: list[StoryboardPanelSpec]) -> list[StoryboardPanelSpec]:
+    """将章节镜头标准化为 5 秒内容格 + 1 个空白结束格。
+
+    输入镜头可以少于或多于 5 个。少于 5 个时沿用最后一个画面做 hold；
+    多于 5 个时取前 5 个时序画面，保持“1 秒 1 格”的视频预演语义。
+    """
+
+    sorted_panels = sorted((panel for panel in panels if not panel.is_blank), key=lambda panel: panel.shot_index)
+    if not sorted_panels:
+        return [_blank_storyboard_panel()]
+    content_panels: list[StoryboardPanelSpec] = []
+    for offset in range(STORYBOARD_PAGE_CONTENT_SECONDS):
+        source = sorted_panels[min(offset, len(sorted_panels) - 1)]
+        content_panels.append(
+            StoryboardPanelSpec(
+                shot_id=source.shot_id,
+                shot_index=offset + 1,
+                shot_title=source.shot_title,
+                one_sentence_summary=source.one_sentence_summary,
+                six_elements=source.six_elements,
+                second=offset + 1,
+                is_blank=False,
+            )
+        )
+    content_panels.append(_blank_storyboard_panel())
+    return content_panels
+
+
+def _blank_storyboard_panel() -> StoryboardPanelSpec:
+    """创建第 6 格空白结束格；该格不向视频模型提供六要素。"""
+
+    return StoryboardPanelSpec(
+        shot_id="blank",
+        shot_index=STORYBOARD_PAGE_TOTAL_PANELS,
+        shot_title="空白格",
+        one_sentence_summary="",
+        six_elements={},
+        second=None,
+        is_blank=True,
+    )
 
 
 def _one_sentence_summary(*, scene_name: str, character_name: str, shot: Shot, action_process: str) -> str:
@@ -621,9 +682,11 @@ async def _upsert_storyboard_page_artifact(
         {
             "chapter_id": chapter_id,
             "style": "hand_drawn_storyboard_page",
-            "aspect_ratio": "9:16",
+            "aspect_ratio": STORYBOARD_PAGE_TARGET_RATIO,
             "panel_count": spec.panel_count,
-            "layout": "2_columns_x_4_rows_when_8_panels",
+            "layout": "2_rows_x_3_columns",
+            "duration_seconds": STORYBOARD_PAGE_CONTENT_SECONDS,
+            "blank_panel_index": STORYBOARD_PAGE_TOTAL_PANELS,
             "visible_summary_layer": "one_sentence_below_each_panel",
             "video_model_layer": "six_elements_for_video_model_only",
             "image_file_id": file_id,
@@ -633,10 +696,10 @@ async def _upsert_storyboard_page_artifact(
         }
     )
     content_json["pages"] = pages
-    content_json["schema_version"] = 2
-    content_json["summary_layer"] = "visible_one_sentence_below_each_panel"
+    content_json["schema_version"] = 3
+    content_json["summary_layer"] = "visible_one_sentence_below_content_panels_only"
     content_json["video_model_layer"] = "six_elements_for_video_model_only"
-    content_text = "\n".join(panel.one_sentence_summary for panel in spec.panels)
+    content_text = "\n".join(panel.one_sentence_summary for panel in spec.panels if panel.one_sentence_summary)
     if existing is not None:
         existing.content_json = content_json
         existing.content_text = content_text
@@ -664,6 +727,8 @@ def _panel_payload(panel: StoryboardPanelSpec) -> dict[str, Any]:
         "shot_id": panel.shot_id,
         "shot_index": panel.shot_index,
         "shot_title": panel.shot_title,
+        "second": panel.second,
+        "is_blank": panel.is_blank,
         "visible_summary": panel.one_sentence_summary,
         "six_elements_for_video_model": panel.six_elements,
     }

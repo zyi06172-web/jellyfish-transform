@@ -1,11 +1,140 @@
 from __future__ import annotations
 
-from app.models.studio import CameraAngle, CameraMovement, CameraShotType, Character, ProjectStyle, ProjectVisualStyle, Scene, Shot, ShotDetail, VFXType
-from app.services.studio.agent.hand_drawn_storyboard import (
-    StoryboardPanelSpec,
-    build_hand_drawn_storyboard_page_spec,
-    build_hand_drawn_storyboard_spec,
-)
+import importlib.util
+import sys
+import types
+from enum import Enum
+from pathlib import Path
+from types import SimpleNamespace
+
+
+class _FlexibleModel:
+    """测试用轻量模型，避免导入真实 ORM 聚合与数据库运行时。"""
+
+    def __init__(self, **kwargs: object) -> None:
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class CameraShotType(str, Enum):
+    ecu = "ECU"
+    mcu = "MCU"
+    ms = "MS"
+    mls = "MLS"
+    ls = "LS"
+
+
+class CameraAngle(str, Enum):
+    eye_level = "EYE_LEVEL"
+    low_angle = "LOW_ANGLE"
+
+
+class CameraMovement(str, Enum):
+    static = "STATIC"
+    pan = "PAN"
+    track = "TRACK"
+
+
+class VFXType(str, Enum):
+    none = "NONE"
+
+
+class ProjectStyle(str, Enum):
+    real_people_city = "real_people_city"
+
+
+class ProjectVisualStyle(str, Enum):
+    live_action = "live_action"
+
+
+class AssetQualityLevel(str, Enum):
+    high = "high"
+
+
+class AgentArtifactKind(str, Enum):
+    storyboard = "storyboard"
+
+
+class AgentArtifactStatus(str, Enum):
+    draft = "draft"
+
+
+Character = Scene = Shot = ShotDetail = _FlexibleModel
+
+
+def _install_storyboard_test_stubs() -> None:
+    """安装故事板单测所需 stub，确保 pytest 不触发真实 DB/存储 I/O。"""
+
+    studio_module = types.ModuleType("app.models.studio")
+    for name in [
+        "AgentArtifact",
+        "CharacterImage",
+        "Chapter",
+        "SceneImage",
+        "ShotCharacterLink",
+        "ProjectSceneLink",
+    ]:
+        setattr(studio_module, name, _FlexibleModel)
+    for name, value in {
+        "AgentArtifactKind": AgentArtifactKind,
+        "AgentArtifactStatus": AgentArtifactStatus,
+        "AssetQualityLevel": AssetQualityLevel,
+        "Character": Character,
+        "Scene": Scene,
+        "Shot": Shot,
+        "ShotDetail": ShotDetail,
+    }.items():
+        setattr(studio_module, name, value)
+
+    task_module = types.ModuleType("app.models.task")
+    task_module.GenerationTask = _FlexibleModel
+
+    runner_module = types.ModuleType("app.services.studio.image_task_runner")
+
+    async def _unused_async(*_: object, **__: object) -> None:
+        return None
+
+    runner_module.create_image_task_and_link = _unused_async
+    runner_module.run_image_generation_task = _unused_async
+
+    image_tasks_module = types.ModuleType("app.services.studio.image_tasks")
+    image_tasks_module.resolve_front_image_ref = _unused_async
+
+    files_module = types.ModuleType("app.utils.files")
+    files_module.create_file_from_url_or_b64 = _unused_async
+
+    for name, module in {
+        "app.models": types.ModuleType("app.models"),
+        "app.models.studio": studio_module,
+        "app.models.task": task_module,
+        "app.services": types.ModuleType("app.services"),
+        "app.services.studio": types.ModuleType("app.services.studio"),
+        "app.services.studio.image_task_runner": runner_module,
+        "app.services.studio.image_tasks": image_tasks_module,
+        "app.utils": types.ModuleType("app.utils"),
+        "app.utils.files": files_module,
+    }.items():
+        module.__dict__.setdefault("__path__", [])
+        sys.modules.setdefault(name, module)
+
+
+def _load_storyboard_module() -> types.ModuleType:
+    """按文件加载故事板模块，绕开重型 package __init__。"""
+
+    _install_storyboard_test_stubs()
+    module_path = Path(__file__).resolve().parents[1] / "app/services/studio/agent/hand_drawn_storyboard.py"
+    spec = importlib.util.spec_from_file_location("hand_drawn_storyboard_under_test", module_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_storyboard_module = _load_storyboard_module()
+StoryboardPanelSpec = _storyboard_module.StoryboardPanelSpec
+build_hand_drawn_storyboard_page_spec = _storyboard_module.build_hand_drawn_storyboard_page_spec
+build_hand_drawn_storyboard_spec = _storyboard_module.build_hand_drawn_storyboard_spec
 
 
 def test_hand_drawn_storyboard_keeps_visible_summary_separate_from_six_elements() -> None:
@@ -134,21 +263,27 @@ def test_hand_drawn_storyboard_page_uses_one_seedream_call_for_all_panels() -> N
         reference_scene=None,
     )
 
-    assert spec.panel_count == 8
-    assert "一页纸内清晰分成 8 个分镜格" in spec.prompt
-    assert "2列×4行网格" in spec.prompt
-    assert "格子下方留白写一句中文短总结" in spec.prompt
+    assert spec.panel_count == 6
+    assert [panel.second for panel in spec.panels[:5]] == [1, 2, 3, 4, 5]
+    assert spec.panels[5].is_blank is True
+    assert spec.panels[5].six_elements == {}
+    assert "16:9 横图" in spec.prompt
+    assert "严格 2 行 × 3 列横向网格" in spec.prompt
+    assert "第一行从左到右是 1、2、3，第二行从左到右是 4、5、6" in spec.prompt
+    assert "禁止排成 2 列 × 3 行" in spec.prompt
+    assert "第 1-5 格各代表 1 秒画面时间" in spec.prompt
+    assert "第 6 格是空白结束格" in spec.prompt
+    assert "第 6 格正下方不写说明" in spec.prompt
     assert "脚本忠实度是最高优先级" in spec.prompt
     assert "禁止自行扩展、改写、补写或添加" in spec.prompt
-    assert "严格按照 1→2→3→4→..." in spec.prompt
-    assert "第1格是剧情开头，最后一格是结尾" in spec.prompt
-    assert "左上角必须标出清晰可见的格号数字 1、2、3、4" in spec.prompt
+    assert "严格按时间顺序从左到右、从上到下排列" in spec.prompt
+    assert "阿拉伯数字格号 1、2、3、4、5" in spec.prompt
     assert "红色箭头" in spec.prompt
     assert "蓝色箭头" in spec.prompt
     assert "绿色小标记" in spec.prompt
     assert "六要素结构化信息不要写进图里" in spec.prompt
-    assert "允许每格左上角格号数字和格子下方一句中文总结" in spec.prompt
-    assert "第8格，一句话总结。" in spec.prompt
+    assert "第6格，一句话总结。" not in spec.prompt
+    assert "第8格，一句话总结。" not in spec.prompt
 
 
 def test_hand_drawn_storyboard_page_sorts_panels_by_time_index() -> None:
@@ -189,5 +324,36 @@ def test_hand_drawn_storyboard_page_sorts_panels_by_time_index() -> None:
         reference_scene=None,
     )
 
-    assert [panel.shot_index for panel in spec.panels] == [1, 2]
-    assert spec.prompt.index("1. 第一格") < spec.prompt.index("2. 第二格")
+    assert [panel.shot_index for panel in spec.panels] == [1, 2, 3, 4, 5, 6]
+    assert [panel.shot_title for panel in spec.panels[:5]] == ["第一格", "第二格", "第二格", "第二格", "第二格"]
+    assert spec.panels[-1].is_blank is True
+    assert spec.prompt.index("1. 第 1 秒：第一格") < spec.prompt.index("2. 第 2 秒：第二格")
+
+
+def test_hand_drawn_storyboard_page_keeps_blank_panel_out_of_video_elements() -> None:
+    panel = StoryboardPanelSpec(
+        shot_id="shot-1",
+        shot_index=1,
+        shot_title="固定宽景",
+        one_sentence_summary="雨中等待，动作轻微推进。",
+        six_elements={
+            "subject": {"value": "主角", "motion_process": "站在原地等待"},
+            "scene": {"value": "巴士站", "motion_process": "雨线持续落下"},
+            "camera": {"value": "STATIC", "motion_process": "固定镜头保持"},
+            "shot_size": {"value": "LS", "motion_process": "宽景 hold"},
+            "shooting_method": {"value": "标记", "motion_process": "红箭头标轻微动作，蓝箭头几乎不动，绿标记框住站牌"},
+            "lighting": {"value": "阴雨自然光", "motion_process": "光线不变"},
+        },
+    )
+    spec = build_hand_drawn_storyboard_page_spec(
+        chapter_id="chapter-1",
+        panels=[panel],
+        reference_character=None,
+        reference_scene=None,
+    )
+
+    assert [item.shot_title for item in spec.panels[:5]] == ["固定宽景"] * 5
+    assert spec.panels[5].one_sentence_summary == ""
+    assert spec.panels[5].six_elements == {}
+    assert "同一持续状态可以跨格 hold" in spec.prompt
+    assert "6. 空白格｜留空，不画内容、不加说明｜六要素为空" in spec.prompt
