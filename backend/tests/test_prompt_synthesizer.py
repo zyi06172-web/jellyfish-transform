@@ -7,6 +7,7 @@ from app.services.studio.agent.prompt_synthesizer import (
     ElementBible,
     FinalVideoSpec,
     ImagePromptRequest,
+    KeyframeImagePromptRequest,
     PromptSynthesizer,
     VideoPromptRequest,
 )
@@ -24,10 +25,18 @@ class FakePromptLLM:
     async def synthesize_image_prompt(self, request: dict) -> str:
         self.calls.append(request)
         user_instruction = request["user_instruction"]
-        element = request["element_bible"]
+        element = request.get("element_bible") or {"name": request.get("panel", {}).get("title", "关键帧")}
         return self.response.format(
-            name=element["name"],
+            name=element.get("name", "关键帧"),
             user_instruction=user_instruction or "无额外用户输入",
+        )
+
+    async def synthesize_video_prompt(self, request: dict) -> str:
+        self.calls.append(request)
+        shot = request["shot"]
+        return self.response.format(
+            name=shot.get("title", "镜头"),
+            user_instruction=request["user_instruction"] or "无额外用户输入",
         )
 
 
@@ -310,15 +319,73 @@ async def test_image_prompt_rewrites_provider_sensitive_style_names() -> None:
     assert "35mm 胶片质感" in result.prompt
 
 
-async def test_video_prompt_interface_is_signature_only_for_this_phase() -> None:
-    """Phase 3 只保留视频提示词接口，不接 Seedance。"""
+async def test_video_prompt_synthesizer_outputs_motion_prompt_with_hard_rules() -> None:
+    """视频提示词合成器把运动逻辑、时长画幅和负向约束确定性补齐。"""
 
-    synthesizer = PromptSynthesizer(FakePromptLLM("不会被调用"))
+    llm = FakePromptLLM("冷司寒入场镜头，镜头缓慢推近，人物从门口走向红毯中央。")
+    synthesizer = PromptSynthesizer(llm)
 
-    with pytest.raises(NotImplementedError, match="后续视频批次"):
-        await synthesizer.synthesize_video_prompt(
-            VideoPromptRequest(
-                final_video_spec=FinalVideoSpec(title="婚礼协议", output_language="中文"),
-                shot={"shot_id": "shot-1"},
-            )
+    result = await synthesizer.synthesize_video_prompt(
+        VideoPromptRequest(
+            final_video_spec=FinalVideoSpec(title="婚礼协议", output_language="中文", aspect_ratio="9:16"),
+            shot={"shot_id": "shot-1", "title": "冷司寒入场", "movement": "DOLLY_IN"},
+            seconds=2,
+            ratio="9:16",
+            action_beats=["冷司寒推门入场", "全场目光转向他"],
+            movement_delta="从门口逆光剪影推进到红毯中央",
+            screen_direction="沿红毯纵深保持 180° 轴线",
+            composition_anchor="以宴会厅大门和红毯为构图锚点",
         )
+    )
+    prompt = result.prompt
+
+    assert "冷司寒" in prompt
+    assert "2 秒" in prompt
+    assert "9:16" in prompt
+    assert "谁动" in prompt
+    assert "怎么动" in prompt
+    assert "速度" in prompt
+    assert "轨迹" in prompt
+    assert "screen_direction" in prompt
+    assert "composition_anchor" in prompt
+    assert "180°" in prompt
+    assert "不要新增无关人物" in prompt
+    assert "不要改变角色身份" in prompt
+    assert "画面闪烁" in prompt
+    assert "\n" not in prompt
+
+
+async def test_keyframe_prompt_synthesizer_locks_single_realistic_frame() -> None:
+    """关键帧图片提示词输出单段自然提示，并补齐单秒画面与无文字约束。"""
+
+    llm = FakePromptLLM("超写实电影剧照，{name}，人物站在婚礼大堂红毯上。")
+    synthesizer = PromptSynthesizer(llm)
+
+    result = await synthesizer.synthesize_keyframe_image_prompt(
+        KeyframeImagePromptRequest(
+            final_video_spec=FinalVideoSpec(title="婚礼协议", visual_style="写实短剧", aspect_ratio="9:16"),
+            panel={
+                "title": "冷司寒入场",
+                "six_elements": {
+                    "shot_size": {"value": "MS"},
+                    "camera": {"value": "DOLLY_IN"},
+                    "lighting": {"value": "门口逆光"},
+                },
+            },
+            character_bible={"name": "冷司寒", "clothing": "黑色西装"},
+            character_references=["图1"],
+            scene_asset={"name": "婚礼大堂", "description": "中央红毯"},
+            screen_direction="沿红毯纵深保持 180° 轴线",
+            composition_anchor="门口和红毯为构图锚点",
+        )
+    )
+
+    assert "超写实" in result.prompt
+    assert "电影级光影" in result.prompt
+    assert "只画" in result.prompt
+    assert "这一秒" in result.prompt
+    assert "不要分镜框" in result.prompt
+    assert "画面文字" in result.prompt
+    assert "screen_direction" in result.prompt
+    assert "composition_anchor" in result.prompt
+    assert "\n" not in result.prompt

@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
+from app.services.studio.shot_video_prompt_pack import DEFAULT_VIDEO_NEGATIVE_PROMPT
+
 
 ElementKind = Literal["character", "scene", "prop"]
 
@@ -70,20 +72,59 @@ class ImagePromptResult:
 
 @dataclass(frozen=True)
 class VideoPromptRequest:
-    """视频提示词合成接口占位；执行接入留到视频批次。"""
+    """视频运动提示词合成请求。"""
 
     final_video_spec: FinalVideoSpec
     shot: dict[str, Any]
     user_instruction: str = ""
     chinese_environment: bool = True
+    seconds: int | float | None = None
+    ratio: str = ""
+    shot_six_elements: dict[str, Any] = field(default_factory=dict)
+    action_beats: list[str] = field(default_factory=list)
+    previous_shot: str = ""
+    next_shot: str = ""
+    continuity_guidance: str = ""
+    screen_direction: str = ""
+    composition_anchor: str = ""
+    character_assets: list[dict[str, Any]] = field(default_factory=list)
+    scene_asset: dict[str, Any] | None = None
+    first_frame: str = ""
+    last_frame: str = ""
+    movement_delta: str = ""
 
 
 @dataclass(frozen=True)
 class VideoPromptResult:
-    """视频提示词合成结果占位。"""
+    """视频提示词合成结果。"""
 
     prompt: str
     model_category: Literal["text"] = "text"
+    hard_rules: tuple[str, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class KeyframeImagePromptRequest:
+    """单个故事板格渲染为超写实关键帧的提示词请求。"""
+
+    final_video_spec: FinalVideoSpec
+    panel: dict[str, Any]
+    character_bible: dict[str, Any] = field(default_factory=dict)
+    character_references: list[str] = field(default_factory=list)
+    scene_asset: dict[str, Any] | None = None
+    screen_direction: str = ""
+    composition_anchor: str = ""
+    user_instruction: str = ""
+    chinese_environment: bool = True
+
+
+@dataclass(frozen=True)
+class KeyframeImagePromptResult:
+    """关键帧图片提示词合成结果。"""
+
+    prompt: str
+    model_category: Literal["text"] = "text"
+    hard_rules: tuple[str, ...] = field(default_factory=tuple)
 
 
 class PromptSynthesisLLM(Protocol):
@@ -91,6 +132,9 @@ class PromptSynthesisLLM(Protocol):
 
     async def synthesize_image_prompt(self, request: dict[str, Any]) -> str:
         """把三源输入融合为自然流畅的一段图片提示词。"""
+
+    async def synthesize_video_prompt(self, request: dict[str, Any]) -> str:
+        """把镜头数据融合为自然流畅的一段视频运动提示词。"""
 
 
 class PromptSynthesizer:
@@ -123,9 +167,63 @@ class PromptSynthesizer:
         return ImagePromptResult(prompt=prompt, hard_rules=hard_rules)
 
     async def synthesize_video_prompt(self, request: VideoPromptRequest) -> VideoPromptResult:
-        """视频提示词接口占位；Phase 3 不接 Seedance 执行链。"""
+        """合成图生视频运动提示词，作为 Seedance 的主提示词来源。"""
 
-        raise NotImplementedError("视频提示词合成将在后续视频批次接入。")
+        hard_rules = _video_hard_rules(request)
+        payload = {
+            "language_rule": _video_language_rule(request),
+            "shot": request.shot,
+            "shot_six_elements": request.shot_six_elements,
+            "action_beats": request.action_beats,
+            "movement_delta": request.movement_delta,
+            "first_frame": request.first_frame,
+            "last_frame": request.last_frame,
+            "continuity": {
+                "previous_shot": request.previous_shot,
+                "next_shot": request.next_shot,
+                "continuity_guidance": request.continuity_guidance,
+                "screen_direction": request.screen_direction,
+                "composition_anchor": request.composition_anchor,
+            },
+            "assets": {
+                "characters": request.character_assets,
+                "scene": request.scene_asset or {},
+            },
+            "seconds": request.seconds,
+            "ratio": request.ratio or request.final_video_spec.aspect_ratio,
+            "user_instruction": request.user_instruction.strip(),
+            "hard_rules": hard_rules,
+            "output_contract": "只输出一段自然、专业、可执行的视频运动提示词，不分标签段落，不解释规则。",
+        }
+        raw_prompt = await self._llm.synthesize_video_prompt(payload)
+        prompt = _single_paragraph(raw_prompt)
+        prompt = _provider_safe_prompt(prompt)
+        prompt = _append_missing_video_hard_rules(prompt, hard_rules)
+        return VideoPromptResult(prompt=prompt, hard_rules=hard_rules)
+
+    async def synthesize_keyframe_image_prompt(self, request: KeyframeImagePromptRequest) -> KeyframeImagePromptResult:
+        """合成单个故事板内容格的超写实电影关键帧图片提示词。"""
+
+        hard_rules = _keyframe_hard_rules(request)
+        payload = {
+            "language_rule": _keyframe_language_rule(request),
+            "character_bible": request.character_bible,
+            "character_references": request.character_references,
+            "scene_asset": request.scene_asset or {},
+            "panel": request.panel,
+            "screen_direction": request.screen_direction,
+            "composition_anchor": request.composition_anchor,
+            "ratio": request.final_video_spec.aspect_ratio,
+            "visual_style": request.final_video_spec.visual_style,
+            "user_instruction": request.user_instruction.strip(),
+            "hard_rules": hard_rules,
+            "output_contract": "只输出一段自然流畅的图片提示词，不分标签段落，不解释规则。",
+        }
+        raw_prompt = await self._llm.synthesize_image_prompt(payload)
+        prompt = _single_paragraph(raw_prompt)
+        prompt = _provider_safe_prompt(prompt)
+        prompt = _append_missing_keyframe_hard_rules(prompt, hard_rules)
+        return KeyframeImagePromptResult(prompt=prompt, hard_rules=hard_rules)
 
 
 CINEMATIC_RULES: tuple[str, ...] = (
@@ -143,6 +241,21 @@ def _language_rule(request: ImagePromptRequest) -> str:
     return (
         f"提示词使用{prompt_language}；旁白或对白内容必须严格使用 "
         f"Final_Video_Spec.output_language={request.final_video_spec.output_language}。"
+    )
+
+
+def _video_language_rule(request: VideoPromptRequest) -> str:
+    prompt_language = "中文" if request.chinese_environment else "English"
+    return (
+        f"视频运动提示词使用{prompt_language}；若出现旁白或对白，只能使用 "
+        f"Final_Video_Spec.output_language={request.final_video_spec.output_language}。"
+    )
+
+
+def _keyframe_language_rule(request: KeyframeImagePromptRequest) -> str:
+    prompt_language = "中文" if request.chinese_environment else "English"
+    return (
+        f"关键帧图片提示词使用{prompt_language}；画面内不要写旁白、对白、字幕或任何可读文字。"
     )
 
 
@@ -305,6 +418,31 @@ def _hard_rules(request: ImagePromptRequest) -> tuple[str, ...]:
     return tuple(rules)
 
 
+def _keyframe_hard_rules(request: KeyframeImagePromptRequest) -> tuple[str, ...]:
+    """关键帧图片的确定性硬规则。"""
+
+    return (
+        "关键帧必须是超写实、电影级光影的单帧画面，画幅严格使用项目选定 ratio。",
+        "人物身份、长相、服装和场景必须严格参照资产参考图与角色圣经，不得自行改动。",
+        "只画该故事板格对应的这一秒画面，不要分镜框、格线、编号、字幕、对白、水印或任何画面文字。",
+        "必须体现该格六要素中的景别、机位角度、灯光、主体姿态表情站位、screen_direction 和 composition_anchor。",
+    )
+
+
+def _video_hard_rules(request: VideoPromptRequest) -> tuple[str, ...]:
+    """视频运动提示词的确定性硬规则。"""
+
+    seconds = request.seconds if request.seconds not in (None, "") else "镜头设定"
+    ratio = request.ratio or request.final_video_spec.aspect_ratio
+    return (
+        f"视频时长必须按 {seconds} 秒执行，画幅比例必须为 {ratio}。",
+        "运动逻辑优先：必须写清谁动、怎么动、速度/幅度/轨迹，以及镜头如何推、拉、摇、移、跟或固定。",
+        "只描述可见动作、可见表情、光影和画面连续性，不解释不可见心理。",
+        "承接前后镜头时必须守住 screen_direction、composition_anchor 和 180° 轴线，不要无故跳轴。",
+        f"负向提示：{DEFAULT_VIDEO_NEGATIVE_PROMPT}",
+    )
+
+
 WEARABLE_ACCESSORY_TERMS: tuple[str, ...] = (
     "胸针",
     "戒指",
@@ -347,6 +485,24 @@ def _append_missing_hard_rules(prompt: str, hard_rules: tuple[str, ...]) -> str:
     return _single_paragraph(result)
 
 
+def _append_missing_keyframe_hard_rules(prompt: str, hard_rules: tuple[str, ...]) -> str:
+    result = prompt.strip()
+    for rule in hard_rules:
+        key_terms = _keyframe_rule_key_terms(rule)
+        if not all(term in result for term in key_terms):
+            result = f"{result} {rule}".strip()
+    return _single_paragraph(result)
+
+
+def _append_missing_video_hard_rules(prompt: str, hard_rules: tuple[str, ...]) -> str:
+    result = prompt.strip()
+    for rule in hard_rules:
+        key_terms = _video_rule_key_terms(rule)
+        if not all(term in result for term in key_terms):
+            result = f"{result} {rule}".strip()
+    return _single_paragraph(result)
+
+
 def _rule_key_terms(rule: str) -> tuple[str, ...]:
     if "eye shape" in rule:
         return ("eye shape", "jawline", "hairstyle", "hair color", "clothing")
@@ -362,6 +518,32 @@ def _rule_key_terms(rule: str) -> tuple[str, ...]:
         return ("pure white", "clean white studio background", "不是浅灰")
     if "不要单独生成道具资产图" in rule:
         return ("穿戴类配饰", "不要单独生成道具资产图", "角色圣经")
+    return (rule,)
+
+
+def _keyframe_rule_key_terms(rule: str) -> tuple[str, ...]:
+    if "超写实" in rule:
+        return ("超写实", "电影级光影")
+    if "人物身份" in rule:
+        return ("人物身份", "服装", "场景", "参考图")
+    if "只画该故事板格" in rule:
+        return ("只画", "这一秒", "不要分镜框", "画面文字")
+    if "六要素" in rule:
+        return ("六要素", "screen_direction", "composition_anchor")
+    return (rule,)
+
+
+def _video_rule_key_terms(rule: str) -> tuple[str, ...]:
+    if "视频时长" in rule:
+        return ("秒", "画幅比例")
+    if "运动逻辑优先" in rule:
+        return ("谁动", "怎么动", "速度", "轨迹")
+    if "只描述可见动作" in rule:
+        return ("只描述可见动作",)
+    if "180°" in rule:
+        return ("screen_direction", "composition_anchor", "180°")
+    if "负向提示" in rule:
+        return ("不要新增无关人物", "不要改变角色身份", "不要出现文字水印", "镜头跳变", "画面闪烁")
     return (rule,)
 
 

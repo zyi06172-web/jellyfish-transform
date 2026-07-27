@@ -279,8 +279,23 @@ def enrich_frame_prompt_with_guidance(
         screen_direction_guidance=screen_direction_guidance,
     )
     if not guidance_lines:
-        return text
-    return "\n".join([*guidance_lines, text]).strip()
+        return _append_keyframe_rendering_rules(text)
+    return _append_keyframe_rendering_rules("\n".join([*guidance_lines, text]).strip())
+
+
+def _append_keyframe_rendering_rules(prompt: str) -> str:
+    """补齐故事板格转超写实关键帧时必须进入模型的硬规则。"""
+
+    text = (prompt or "").strip()
+    rules = [
+        "关键帧必须是超写实、电影级光影的单帧画面，画幅严格使用项目选定 ratio。",
+        "人物身份、长相、服装和场景必须严格参照资产参考图，不得自行改动。",
+        "只画这一秒画面，不要分镜框、格线、编号、字幕、对白、水印或任何画面文字。",
+    ]
+    for rule in rules:
+        if rule not in text:
+            text = f"{text}\n{rule}".strip()
+    return text
 
 
 def compose_shot_frame_rendered_prompt(

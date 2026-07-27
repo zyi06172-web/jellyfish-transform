@@ -357,3 +357,45 @@ def test_hand_drawn_storyboard_page_keeps_blank_panel_out_of_video_elements() ->
     assert spec.panels[5].six_elements == {}
     assert "同一持续状态可以跨格 hold" in spec.prompt
     assert "6. 空白格｜留空，不画内容、不加说明｜六要素为空" in spec.prompt
+
+
+def test_hand_drawn_storyboard_page_derives_shot_groups_with_peak_guard() -> None:
+    panels = []
+    for index, title in enumerate(["宾客等待", "沈知夏低头", "冷司寒入场", "证据打断婚礼", "顾霆琛抢遥控器"], start=1):
+        panels.append(
+            StoryboardPanelSpec(
+                shot_id=f"shot-{index}",
+                shot_index=index,
+                shot_title=title,
+                one_sentence_summary=f"{title}，动作按时序推进。",
+                six_elements={
+                    "subject": {"value": "沈知夏", "motion_process": f"{title}的可见动作"},
+                    "scene": {"value": "婚礼大堂", "motion_process": "红毯和舞台保持空间连续"},
+                    "camera": {"value": "STATIC", "motion_process": "镜头稳定"},
+                    "shot_size": {"value": "MS", "motion_process": "中景叙事"},
+                    "shooting_method": {"value": "标记", "motion_process": f"{title}的身体运动和摄像机运动"},
+                    "lighting": {"value": "冷白追光", "motion_process": "光线连续"},
+                },
+            )
+        )
+
+    spec = build_hand_drawn_storyboard_page_spec(
+        chapter_id="chapter-1",
+        panels=panels,
+        reference_character=None,
+        reference_scene=None,
+    )
+
+    assert 2 <= len(spec.shots) <= 3
+    assert spec.panels[-1].shot_group is None
+    assert {panel.shot_group for panel in spec.panels[:5]} == {1, 2, 3}
+    peak_groups = [group for group in spec.shots if group.is_peak]
+    assert len(peak_groups) == 1
+    peak = peak_groups[0]
+    assert peak.first_cell == peak.last_cell == 4
+    assert peak.camera_shot in {"ECU", "CU"}
+    assert peak.movement == "DOLLY_IN"
+    assert "180°" in peak.screen_direction
+    assert "构图锚点" in peak.composition_anchor
+    assert "panel_to_shot" not in spec.prompt
+    assert "峰值单独成镜" in spec.prompt

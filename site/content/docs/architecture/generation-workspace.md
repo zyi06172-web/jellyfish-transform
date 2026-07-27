@@ -176,8 +176,33 @@ backend/app/services/studio/generation/
   - 不渲染图下说明
   - `six_elements_for_video_model` 固定为空对象
 - 六要素仍只写入 `AgentArtifact.content_json.pages[*].panels[*].six_elements_for_video_model`，不渲染进画面
+- 故事板页会在第 1-5 格基础上派生 `shots` 镜头分组：
+  - 每个内容格写入 `shot_group`
+  - 第 6 格空白不属于任何镜头
+  - 默认派生 2-3 个镜头，避免一镜到底或切碎
+  - 反转 / 钩子 / 动作峰值格会单独成镜，并强制使用 `CU`/`ECU` 倾向与 `DOLLY_IN`
+  - 每个镜头分组写入 `first_cell`、`last_cell`、`duration_seconds`、`camera_shot`、`angle`、`movement`、`screen_direction`、`composition_anchor`、`reference_mode` 与 `motion_description`
+- 每个内容格和镜头分组都会填充：
+  - `screen_direction_guidance` / `screen_direction`
+  - `composition_anchor`
+  - 这些字段用于后续关键帧渲染和视频提示词合成，不作为画面文字渲染
 - 若输入镜头少于 5 个，故事板允许连续格 hold 同一持续状态，只做细微推进，不硬凑新剧情
 - 拆分镜与故事板提示词都必须保持脚本忠实度最高优先级：只做技术拆分和视觉化，不扩写、不改写、不新增原剧本没有的人物或事件
+
+### 视频提示词合成
+
+当前视频生成预览按以下优先级得到最终 prompt：
+
+- 用户手写 prompt 仍是最高优先级，并会继续通过 `enrich_rendered_video_prompt` 补齐动作拍点、连续性、构图和朝向约束
+- 若用户未手写 prompt，后端会优先调用 `PromptSynthesizer.synthesize_video_prompt`
+  - 输入来自现有 `ShotVideoPromptPackRead`
+  - 包含镜头六要素、`action_beats`、首尾帧差异、前后镜头连续性、`screen_direction_guidance`、`composition_anchor`、角色 / 场景资产、`seconds` 与 `ratio`
+  - 合成器输出单段自然运动提示词，并由确定性代码补齐时长、画幅、运动逻辑、180° 轴线和 `DEFAULT_VIDEO_NEGATIVE_PROMPT`
+- 若文本模型不可用或合成失败，视频链回落到现有 DB 模板 / 系统 fallback，不中断旧链路
+- 关键帧渲染链仍复用 `generation/frame`，并在最终 frame prompt 中确定性补齐：
+  - 超写实、电影级光影
+  - 只画当前一秒画面
+  - 不画分镜框、格线、编号、字幕、对白、水印或任何画面文字
 
 ### `asset_image`
 
