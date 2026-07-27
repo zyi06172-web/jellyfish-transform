@@ -322,8 +322,8 @@ const ProjectAssetLibraryPage = () => {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f8fa]">
-      <div className="sticky top-0 z-20 border-b border-black/5 bg-white/90 px-6 py-4 backdrop-blur">
+    <div className="nuwa-asset-library min-h-full bg-black text-white">
+      <div className="sticky top-0 z-20 border-b border-white/[.08] bg-black/85 px-6 py-4 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <Space>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(projectId ? `/projects/${projectId}` : '/projects')} />
@@ -331,7 +331,7 @@ const ProjectAssetLibraryPage = () => {
               <Typography.Title level={4} className="!mb-0">
                 项目资产库
               </Typography.Title>
-              <Typography.Text type="secondary">角色四视图、圣经、音色占位与所属场景关系</Typography.Text>
+              <Typography.Text className="!text-white/50">角色四视图、圣经、音色占位与所属场景关系</Typography.Text>
             </div>
           </Space>
           <Button
@@ -350,7 +350,7 @@ const ProjectAssetLibraryPage = () => {
         {!loading && !error && canvas.nodes.length === 0 ? <Empty description="当前项目暂无角色资产" /> : null}
 
         {!loading && !error && canvas.nodes.length > 0 ? (
-          <div className="overflow-auto rounded-lg border border-black/5 bg-[#f3f4f6] shadow-sm">
+          <div className="overflow-auto rounded-lg border border-white/[.10] bg-white/[.04] shadow-sm">
             <div
               className="relative min-w-[1240px]"
               style={{ height: canvasHeight }}
@@ -373,7 +373,7 @@ const ProjectAssetLibraryPage = () => {
                       key={line.id}
                       d={`M ${start.x} ${start.y} C ${start.x + mid} ${start.y}, ${end.x - mid} ${end.y}, ${end.x} ${end.y}`}
                       fill="none"
-                      stroke="#1f2937"
+                      stroke="rgba(255,255,255,.34)"
                       strokeWidth="2"
                       strokeLinecap="round"
                     />

@@ -16,7 +16,7 @@ const ProjectWorkbench: React.FC = () => {
 
   if (!project && !projectLoading) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[#f5f5f7] text-[#1d1d1f]">
+      <div className="flex h-[100dvh] items-center justify-center bg-black text-white">
         <div className="text-center">
           <Empty description={<span className="text-black/50">项目不存在</span>} />
           <Link to="/projects">
@@ -29,14 +29,14 @@ const ProjectWorkbench: React.FC = () => {
 
   if (projectLoading && !project) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[#f5f5f7]">
+      <div className="flex h-[100dvh] items-center justify-center bg-black">
         <Spin />
       </div>
     )
   }
 
   return (
-    <div className="grid h-[100dvh] min-h-0 grid-cols-[10%_27%_27%_36%] overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
+    <div className="grid h-[100dvh] min-h-0 grid-cols-[10%_27%_27%_36%] overflow-hidden bg-black text-white">
       <LeftNav />
       <StoryboardPanel snapshot={snapshot} />
       <PreviewPane project={project} snapshot={snapshot} />

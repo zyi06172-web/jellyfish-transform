@@ -1,12 +1,7 @@
 /* Tailwind and Ant Design compatibility */
 .flova-shell-bg {
   position: relative;
-  background:
-    radial-gradient(circle at 3% 2%, rgba(255, 59, 92, 0.09), transparent 24%),
-    radial-gradient(circle at 23% -5%, rgba(255, 184, 77, 0.08), transparent 25%),
-    radial-gradient(circle at 50% -6%, rgba(80, 220, 128, 0.08), transparent 23%),
-    radial-gradient(circle at 82% 0%, rgba(90, 200, 250, 0.10), transparent 29%),
-    linear-gradient(180deg, #ffffff 0%, #ffffff 46%, #fbfbfd 100%);
+  background: #000;
 }
 
 .flova-shell-bg::before {
@@ -15,10 +10,28 @@
   position: fixed;
   inset: 0;
   background:
-    linear-gradient(105deg, rgba(255, 255, 255, 0.38), transparent 22%, rgba(255, 255, 255, 0.3) 45%, transparent 68%),
-    radial-gradient(circle at 7% 18%, rgba(255, 45, 85, 0.055), transparent 18%),
-    radial-gradient(circle at 14% 0%, rgba(90, 200, 250, 0.06), transparent 20%);
-  mix-blend-mode: screen;
+    radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.34) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 78% 12%, rgba(255, 255, 255, 0.24) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 44% 78%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1.8px);
+  background-size: 220px 220px, 340px 340px, 280px 280px;
+  opacity: 0.5;
+}
+
+.nuwa-deep-space {
+  background:
+    radial-gradient(circle at 13% 16%, rgba(255, 255, 255, 0.32) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 83% 21%, rgba(255, 255, 255, 0.26) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 61% 64%, rgba(255, 255, 255, 0.16) 0 1px, transparent 1.8px),
+    #000;
+  background-size: 240px 240px, 360px 360px, 300px 300px, auto;
+}
+
+.nuwa-deep-space::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 18%, transparent 76%, rgba(255,255,255,.03));
+  opacity: 0.72;
 }
 
 .ant-card {
@@ -135,4 +148,49 @@
 .apple-pill-select .ant-select-selection-item {
   color: rgba(0, 0, 0, 0.62) !important;
   line-height: 38px !important;
+}
+
+.nuwa-workspace-panel .rounded-lg.border,
+.nuwa-workspace-panel .rounded-md.border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.nuwa-workspace-panel .text-black\/42,
+.nuwa-workspace-panel .text-black\/45,
+.nuwa-workspace-panel .text-black\/55,
+.nuwa-workspace-panel .text-black\/60,
+.nuwa-workspace-panel .text-black\/62,
+.nuwa-workspace-panel .text-black\/64,
+.nuwa-workspace-panel .text-black\/66 {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.nuwa-workspace-panel .bg-white {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+.nuwa-workspace-panel .bg-black\/\[\.025\],
+.nuwa-workspace-panel .bg-black\/\[\.035\],
+.nuwa-workspace-panel .bg-black\/\[\.02\],
+.nuwa-workspace-panel .bg-black\/\[\.018\],
+.nuwa-workspace-panel .bg-black\/\[\.015\] {
+  background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.nuwa-workspace-panel .ant-empty-description {
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.nuwa-asset-library .ant-typography,
+.nuwa-asset-library .ant-empty-description {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.nuwa-asset-library .ant-btn:not(.ant-btn-primary) {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
 }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { AgentMessageRead, AgentQuestionCardRead } from '../../../../../services/generated'
 
 function messageClass(role: AgentMessageRead['role']) {
-  return role === 'user' ? 'ml-10 bg-[#1d1d1f] text-white' : 'mr-10 bg-black/[.045] text-black/66'
+  return role === 'user' ? 'ml-10 bg-white text-black' : 'mr-10 bg-white/[.08] text-white/72'
 }
 
 export function AgentChat({
@@ -37,13 +37,13 @@ export function AgentChat({
   }
 
   return (
-    <aside className="flex min-h-0 flex-col bg-white">
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-black/6 px-6">
+    <aside className="flex min-h-0 flex-col border-l border-white/[.06] bg-white/[.035] text-white">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/[.06] px-6">
         <div>
           <div className="text-base font-semibold">Agent 对话</div>
-          <div className="text-xs text-black/42">revision {revision}</div>
+          <div className="text-xs text-white/42">revision {revision}</div>
         </div>
-        <Button shape="circle" type="text" icon={<ReloadOutlined />} onClick={onRefresh} />
+        <Button shape="circle" type="text" icon={<ReloadOutlined />} className="!text-white" onClick={onRefresh} />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         {error ? <Alert className="mb-4" type="warning" showIcon message={error} /> : null}
@@ -59,14 +59,14 @@ export function AgentChat({
                 </div>
               ))
             ) : (
-              <div className="rounded-lg border border-dashed border-black/10 bg-black/[.02] p-4 text-sm text-black/42">
+              <div className="rounded-lg border border-dashed border-white/[.12] bg-white/[.04] p-4 text-sm text-white/42">
                 正在分析剧情…
               </div>
             )}
             {questionCard ? (
-              <div className="mt-5 rounded-lg border border-black/6 bg-white p-4 shadow-sm">
+              <div className="mt-5 rounded-lg border border-white/[.08] bg-white/[.06] p-4 shadow-sm">
                 <div className="mb-3 flex items-start gap-2 text-sm font-semibold">
-                  <CheckOutlined className="mt-1 text-black/35" />
+                  <CheckOutlined className="mt-1 text-white/40" />
                   <span>{questionCard.question}</span>
                 </div>
                 <div className="space-y-2">
@@ -78,8 +78,8 @@ export function AgentChat({
                       onClick={() => onChoice(option.id)}
                       className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition ${
                         option.effect === 'confirm_and_advance' && index === 0
-                          ? 'border-[#1d1d1f] bg-[#1d1d1f] text-white'
-                          : 'border-black/6 bg-black/[.025] text-black/64 hover:bg-black/[.045]'
+                          ? 'border-white bg-white text-black'
+                          : 'border-white/[.08] bg-white/[.05] text-white/68 hover:bg-white/[.09]'
                       }`}
                     >
                       <div className="font-semibold">{option.label}</div>
@@ -92,14 +92,15 @@ export function AgentChat({
           </div>
         )}
       </div>
-      <div className="shrink-0 border-t border-black/6 p-4">
-        <div className="rounded-lg border border-black/6 bg-white p-3 shadow-sm">
+      <div className="shrink-0 border-t border-white/[.06] p-4">
+        <div className="rounded-lg border border-white/[.08] bg-white/[.08] p-3 shadow-sm">
           <Input.TextArea
             value={text}
             onChange={(event) => setText(event.target.value)}
             autoSize={{ minRows: 2, maxRows: 4 }}
             bordered={false}
             placeholder="输入修改意见或补充要求"
+            className="flova-chat-input"
             onPressEnter={(event) => {
               if (!event.shiftKey) {
                 event.preventDefault()

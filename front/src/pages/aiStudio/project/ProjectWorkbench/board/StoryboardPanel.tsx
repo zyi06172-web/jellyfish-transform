@@ -310,10 +310,10 @@ export function StoryboardPanel({ snapshot }: { snapshot: AgentWorkspaceSnapshot
   const elementArtifacts = Object.values(artifacts).filter((item: any) => item?.kind && item.kind !== 'story_summary')
 
   return (
-    <section className="flex min-h-0 flex-col border-r border-black/6 bg-white">
-      <div className="h-16 shrink-0 border-b border-black/6 px-5 py-4">
+    <section className="nuwa-workspace-panel flex min-h-0 flex-col border-l border-white/[.06] bg-white/[.035] text-white">
+      <div className="h-16 shrink-0 border-b border-white/[.06] px-5 py-4">
         <div className="text-base font-semibold">工作流与故事板</div>
-        <div className="text-xs text-black/42">阶段、自动链、分镜页与视频结构</div>
+        <div className="text-xs text-white/42">阶段、自动链、分镜页与视频结构</div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-5">
         <div className="space-y-5">

@@ -17,7 +17,7 @@ import {
   type SkillMode,
 } from './homeProjectCreation'
 
-/** Flova 型首页：承接用户输入、创建项目，并把新项目即时放回最近项目。 */
+/** 女娲式首页：承接用户输入、创建项目，并把新项目即时放回最近项目。 */
 const ProjectLobby: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<HomeProjectCard[]>([])
@@ -92,32 +92,31 @@ const ProjectLobby: React.FC = () => {
   }
 
   return (
-    <div className="relative h-full overflow-y-auto bg-transparent text-[#1d1d1f]">
-      <div className="pointer-events-none fixed inset-y-0 left-0 right-0 bg-[radial-gradient(circle_at_2%_3%,rgba(255,59,92,.08),transparent_24%),radial-gradient(circle_at_31%_-4%,rgba(255,184,77,.07),transparent_25%),radial-gradient(circle_at_58%_-3%,rgba(80,220,128,.07),transparent_24%),radial-gradient(circle_at_84%_2%,rgba(90,200,250,.09),transparent_28%),linear-gradient(180deg,#ffffff_0%,#ffffff_48%,#fbfbfd_100%)]" />
-      <div className="pointer-events-none fixed left-[39%] top-3 h-[360px] w-[780px] -translate-x-1/2 rounded-full bg-[conic-gradient(from_195deg,rgba(255,45,85,.07),rgba(255,149,0,.055),rgba(52,199,89,.055),rgba(90,200,250,.075),rgba(175,82,222,.05),rgba(255,45,85,.07))] blur-3xl" />
+    <div className="relative h-full overflow-y-auto bg-transparent text-white">
+      <div className="nuwa-deep-space pointer-events-none fixed inset-0" />
 
       <section className="relative px-8 pb-7 pt-8">
         <div className="relative mx-auto flex max-w-[1120px] flex-col items-center">
           <div className="mb-8 flex w-full items-center justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold text-black/42">智能视频创作助理</div>
-              <div className="mt-1 text-base font-semibold">短剧工厂</div>
+              <div className="text-xs font-semibold text-white/50">智能视频创作助理</div>
+              <div className="mt-1 text-base font-semibold">女娲 AI 影像工作台</div>
             </div>
-            <div className="rounded-full border border-black/5 bg-white/70 px-4 py-2 text-xs font-semibold text-black/56 shadow-sm backdrop-blur-2xl">
+            <div className="rounded-full border border-white/10 bg-white/[.08] px-4 py-2 text-xs font-semibold text-white/62 shadow-sm backdrop-blur-2xl">
               当前计划：免费版
             </div>
           </div>
 
-          <h1 className="max-w-[900px] text-center text-5xl font-semibold leading-[1.03] tracking-normal text-[#1d1d1f] md:text-[76px]">
-            <span className="block">一段剧情</span>
-            <span className="block">一条视频生产线</span>
+          <h1 className="max-w-[960px] text-center text-5xl font-semibold leading-[1.03] tracking-normal text-white md:text-[76px]">
+            <span className="block">从一句灵感</span>
+            <span className="block">生成完整影像资产链</span>
           </h1>
-          <p className="mt-5 max-w-[660px] text-center text-lg leading-relaxed text-black/43">
-            把灵感交给创作助理，它会理解叙事意图，整理角色与镜头，并把每一次创作沉淀成可继续推进的项目。
+          <p className="mt-5 max-w-[700px] text-center text-lg leading-relaxed text-white/54">
+            把剧本交给女娲，它会沉淀角色圣经、资产库、故事板、镜头分组和视频提示词，让每一集都能沿着同一套视觉资产继续生长。
           </p>
 
           <div className="flova-prompt-shell mt-10 w-full max-w-[520px] rounded-[28px] p-[1px]">
-            <div className="relative rounded-[27px] bg-white/88 p-4 shadow-[0_22px_62px_rgba(0,0,0,.065)] backdrop-blur-2xl">
+            <div className="relative rounded-[27px] bg-[#f8fafc]/95 p-4 shadow-[0_22px_62px_rgba(0,0,0,.28)] backdrop-blur-2xl">
               <Input.TextArea
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
@@ -145,10 +144,10 @@ const ProjectLobby: React.FC = () => {
                     { value: 'Veo', label: 'Veo' },
                   ]}
                 />
-                <Button className="apple-pill-button" icon={<GiftOutlined />}>
+                <Button className="apple-pill-button" icon={<GiftOutlined />} onClick={() => document.getElementById('nuwa-skill-cards')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
                   技能
                 </Button>
-                <Button className="apple-pill-button" icon={<VideoCameraOutlined />}>
+                <Button className="apple-pill-button" icon={<VideoCameraOutlined />} onClick={() => navigate('/asset-library')}>
                   资产库
                 </Button>
                 <div className="ml-auto flex items-center gap-3">
@@ -167,7 +166,7 @@ const ProjectLobby: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-7 grid w-full max-w-[920px] grid-cols-1 gap-3 md:grid-cols-3">
+          <div id="nuwa-skill-cards" className="mt-7 grid w-full max-w-[920px] grid-cols-1 gap-3 md:grid-cols-3">
             {HOME_SKILL_CARDS.map((skill) => (
               <button
                 key={skill.key}
@@ -175,25 +174,25 @@ const ProjectLobby: React.FC = () => {
                 onClick={() => setSelectedSkill(skill.key)}
                 className={`relative flex h-[72px] items-center gap-3 overflow-visible rounded-[22px] border px-4 text-left transition ${
                   selectedSkill === skill.key
-                    ? 'border-black/10 bg-[#1d1d1f] text-white shadow-[0_22px_56px_rgba(0,0,0,.16)]'
-                    : 'border-black/8 bg-white text-[#1d1d1f] shadow-[0_10px_28px_rgba(0,0,0,.055)] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,.09)]'
+                    ? 'border-white/18 bg-white text-[#111827] shadow-[0_22px_56px_rgba(34,211,238,.18)]'
+                    : 'border-white/10 bg-white/[.075] text-white shadow-[0_10px_28px_rgba(0,0,0,.20)] hover:-translate-y-0.5 hover:bg-white/[.12] hover:shadow-[0_18px_42px_rgba(0,0,0,.24)]'
                 }`}
                 style={{ backgroundImage: selectedSkill === skill.key ? skill.accent : undefined }}
               >
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${
-                  selectedSkill === skill.key ? 'bg-white/18' : 'bg-black/[.055]'
+                  selectedSkill === skill.key ? 'bg-black/[.06]' : 'bg-white/[.10]'
                 }`}>
                   {skill.icon}
                 </div>
                 <div className="min-w-0">
                   <div className="truncate text-base font-semibold">{skill.title}</div>
-                  <div className={`truncate text-xs ${selectedSkill === skill.key ? 'text-white/62' : 'text-black/40'}`}>
+                  <div className={`truncate text-xs ${selectedSkill === skill.key ? 'text-black/46' : 'text-white/46'}`}>
                     {skill.subtitle}
                   </div>
                 </div>
                 {skill.hot ? (
                   <span className={`absolute -top-3 right-4 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-                    selectedSkill === skill.key ? 'bg-white text-[#1d1d1f]' : 'bg-[#1d1d1f] text-white'
+                    selectedSkill === skill.key ? 'bg-[#111827] text-white' : 'bg-white text-[#111827]'
                   }`}>
                     推荐
                   </span>
@@ -207,7 +206,7 @@ const ProjectLobby: React.FC = () => {
       <section className="relative mx-auto w-full max-w-[1120px] px-8 pb-16 pt-1">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-2xl font-semibold tracking-normal">最近项目</h2>
-          <Button type="text" className="text-sm text-black/45">
+          <Button type="text" className="text-sm text-white/50">
             查看全部
           </Button>
         </div>
@@ -215,7 +214,7 @@ const ProjectLobby: React.FC = () => {
           <button
             type="button"
             onClick={() => document.querySelector<HTMLTextAreaElement>('.flova-home-input textarea')?.focus()}
-            className="flex min-h-[168px] items-center justify-center rounded-[30px] border border-dashed border-black/16 bg-white/48 text-black/38 transition hover:border-black/26 hover:bg-white"
+            className="flex min-h-[168px] items-center justify-center rounded-[30px] border border-dashed border-white/18 bg-white/[.06] text-white/42 transition hover:border-white/28 hover:bg-white/[.10]"
           >
             <span className="flex h-13 w-13 items-center justify-center rounded-full border border-black/16 text-3xl">
               +
@@ -226,7 +225,7 @@ const ProjectLobby: React.FC = () => {
               key={project.id}
               loading={loadingProjects}
               onClick={() => navigate(`/projects/${project.id}`)}
-              className="flova-project-card min-h-[168px] cursor-pointer overflow-hidden rounded-[30px] border-black/5 bg-white"
+            className="flova-project-card min-h-[168px] cursor-pointer overflow-hidden rounded-[30px] border-white/10 bg-white/[.92]"
               bodyStyle={{ padding: 0 }}
             >
               <div className="h-[92px] bg-[radial-gradient(circle_at_26%_26%,rgba(255,255,255,.85),transparent_21%),linear-gradient(135deg,rgba(0,122,255,.18),rgba(52,199,89,.14),rgba(255,149,0,.12))]" />

@@ -1,28 +1,17 @@
 <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" rx="44" fill="#000000"/>
+  <path d="M100 27L116.8 72.8L163 89.6L116.8 106.4L100 152L83.2 106.4L37 89.6L83.2 72.8L100 27Z" fill="url(#paint0_linear)"/>
+  <path d="M64 142C82 160 118 160 136 142" stroke="#EAFBFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M73 64C88 50 112 50 127 64" stroke="#EAFBFF" stroke-width="8" stroke-linecap="round"/>
+  <path d="M100 58V132" stroke="#EAFBFF" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="100" cy="90" r="18" fill="#000" fill-opacity=".72"/>
+  <text x="100" y="184" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700" fill="#EAFBFF">女娲</text>
   <defs>
-    <linearGradient id="softRainbow" x1="42" y1="44" x2="165" y2="151" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF3B5F"/>
-      <stop offset="0.28" stop-color="#FFB84D"/>
-      <stop offset="0.52" stop-color="#4CD964"/>
-      <stop offset="0.76" stop-color="#5AC8FA"/>
-      <stop offset="1" stop-color="#AF52DE"/>
-    </linearGradient>
-    <linearGradient id="cream" x1="24" y1="24" x2="176" y2="176" gradientUnits="userSpaceOnUse">
+    <linearGradient id="paint0_linear" x1="37" y1="27" x2="163" y2="152" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F7F7FA"/>
+      <stop offset=".36" stop-color="#7DD3FC"/>
+      <stop offset=".68" stop-color="#A78BFA"/>
+      <stop offset="1" stop-color="#F0ABFC"/>
     </linearGradient>
-    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%">
-      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#7A5B3D" flood-opacity=".13"/>
-    </filter>
   </defs>
-  <rect x="20" y="20" width="160" height="160" rx="42" fill="url(#cream)"/>
-  <rect x="28" y="28" width="144" height="144" rx="36" fill="#FFFFFF" stroke="rgba(29,29,31,.08)" stroke-width="2" filter="url(#softShadow)"/>
-  <path d="M58 72C58 63.7 64.7 57 73 57H119C127.3 57 134 63.7 134 72V122C134 130.3 127.3 137 119 137H73C64.7 137 58 130.3 58 122V72Z" fill="#FFFFFF" stroke="#1D1D1F" stroke-width="8" stroke-linejoin="round"/>
-  <path d="M134 86L158 73C163.3 70.2 169 74 169 80V114C169 120 163.3 123.8 158 121L134 108V86Z" fill="#FFFFFF" stroke="#1D1D1F" stroke-width="8" stroke-linejoin="round"/>
-  <circle cx="95" cy="97" r="22" fill="#FFFFFF" stroke="#1D1D1F" stroke-width="8"/>
-  <circle cx="95" cy="97" r="10" stroke="url(#softRainbow)" stroke-width="5"/>
-  <path d="M79 57L88 43H110L120 57" stroke="#1D1D1F" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M69 124C81 134 107 137 122 124" stroke="url(#softRainbow)" stroke-width="7" stroke-linecap="round"/>
-  <path d="M145 94L163 84V110L145 100V94Z" fill="url(#softRainbow)" opacity=".9"/>
-  <circle cx="71" cy="75" r="5" fill="#FFB84D"/>
 </svg>
