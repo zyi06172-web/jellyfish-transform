@@ -33,7 +33,13 @@ class VolcengineVideoApiAdapter:
 
         async with httpx.AsyncClient(timeout=timeout_s) as client:
             r = await client.post(f"{base_url}/contents/generations/tasks", headers=headers, json=body)
-            r.raise_for_status()
+            try:
+                r.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                response_text = (r.text or "").strip()
+                raise RuntimeError(
+                    f"Volcengine video create failed: {r.status_code} {response_text[:1000]}"
+                ) from exc
             data: dict[str, Any] = r.json()
             task_id = str(data.get("id") or data.get("task_id") or "")
             if not task_id:

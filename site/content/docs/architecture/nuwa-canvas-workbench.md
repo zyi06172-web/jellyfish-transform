@@ -18,3 +18,5 @@ Agent 仍然是主路径。画布右侧常驻 `AgentChat`，继续调用 `GET /a
 旧时间线视频编辑器已删除。视频节点、关键帧节点和分镜表节点负责提供本地下载入口：单个产物直接打开下载，多产物打包为 zip，供外部剪辑软件继续处理。画布顶部提供三个素材操作：生成前 5 个内容格的 9:16 关键帧任务、源码排版导出 6 格分镜表 PNG、在用户确认后调用 Seedance 视频任务接口。
 
 关键帧节点会按当前 `chapterId` 读取每个镜头的 `ShotDetail` 与 `ShotFrameImage` 记录，优先展示已落库的首帧/关键帧文件。视频节点优先读取 `Shot.generated_video_file_id`，再兜底读取 `GenerationTaskLink(resource_type=video, relation_type=video)` 的文件关联。分镜表 PNG 是前端源码排版生成：前 5 格左侧绘制真实关键帧，右侧读取真实结构化镜头字段；第 6 格保持空白。
+
+火山 Seedance 2.0 视频提交会显式携带 `resolution: 720p`、`ratio`、`duration` 与参考帧 content。若火山返回 4xx，后端错误会保留供应商响应体，便于区分参数错误、内容安全拦截与账号额度问题。

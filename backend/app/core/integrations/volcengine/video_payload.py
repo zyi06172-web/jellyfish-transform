@@ -56,6 +56,9 @@ def build_create_task_body(input_: VideoGenerationInput) -> dict[str, Any]:
     body: dict[str, Any] = {
         "content": content,
         "ratio": effective_ratio,
+        # Seedance 2.0 的任务创建接口会按分辨率 SKU 校验请求；不显式传入时
+        # 方舟可能直接返回 400，因此这里给竖屏短剧链路一个稳定的默认档。
+        "resolution": "720p",
     }
     if input_.model:
         body["model"] = input_.model
