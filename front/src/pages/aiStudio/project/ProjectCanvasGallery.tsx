@@ -11,7 +11,7 @@ import {
   type HomeProjectCard,
 } from './homeProjectCreation'
 
-/** 项目画布列表：承载用户已创建项目，并提供进入工作台的真实入口。 */
+/** 多集画布列表：一个画布代表一集，承载新建下一集与进入工作台。 */
 const ProjectCanvasGallery: React.FC = () => {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<HomeProjectCard[]>([])
@@ -68,8 +68,11 @@ const ProjectCanvasGallery: React.FC = () => {
       <section className="relative mx-auto w-full max-w-[1180px] px-8 py-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs font-semibold text-white/52">项目</div>
-            <h1 className="mt-2 text-4xl font-semibold tracking-normal text-white">画布</h1>
+            <div className="text-xs font-semibold text-white/52">项目内多集管理</div>
+            <h1 className="mt-2 text-4xl font-semibold tracking-normal text-white">剧集画布</h1>
+            <p className="mt-3 max-w-[640px] text-sm leading-relaxed text-white/48">
+              一个画布对应一集。新建下一集时复用项目级角色圣经、四视图参考图和场景资产，避免跨集重复出图。
+            </p>
           </div>
           <div className="nuwa-mini-create-shell">
             <Button
@@ -79,7 +82,7 @@ const ProjectCanvasGallery: React.FC = () => {
               onClick={() => void handleCreateCanvas()}
               className="nuwa-mini-create-button"
             >
-              创建画布
+              新建下一集
             </Button>
           </div>
         </div>
@@ -92,7 +95,7 @@ const ProjectCanvasGallery: React.FC = () => {
           <div className="rounded-[28px] border border-white/10 bg-black p-12 text-center shadow-[0_0_36px_rgba(125,211,252,.08)]">
             <Empty description={<span className="text-white/54">还没有画布</span>} />
             <Button className="mt-5 !border-white/18 !bg-black !text-white" onClick={() => void handleCreateCanvas()}>
-              创建第一个画布
+              创建第一集画布
             </Button>
           </div>
         ) : (
@@ -113,7 +116,7 @@ const ProjectCanvasGallery: React.FC = () => {
                   </div>
                   <div className="truncate text-lg font-semibold text-white">{project.name}</div>
                   <div className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/46">
-                    {project.description || '女娲创作画布'}
+                    {project.description || '女娲剧集画布'}
                   </div>
                 </div>
               </Card>

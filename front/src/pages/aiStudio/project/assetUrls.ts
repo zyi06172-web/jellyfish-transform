@@ -1,16 +1,18 @@
 import { OpenAPI } from '../../../services/generated'
 
+/** 从后端下载 URL 中反取 file_id，统一走当前 API base 拼接。 */
 function tryExtractFileIdFromUrl(value: string): string | null {
   try {
     const url = new URL(value)
-    const m = url.pathname.match(/\/api\/v1\/studio\/files\/([^/]+)\/download\/?$/)
-    if (m?.[1]) return decodeURIComponent(m[1])
+    const match = url.pathname.match(/\/api\/v1\/studio\/files\/([^/]+)\/download\/?$/)
+    if (match?.[1]) return decodeURIComponent(match[1])
   } catch {
-    // ignore parse error
+    // URL 解析失败时按原值兜底。
   }
   return null
 }
 
+/** 把 file_id、相对路径或绝对 URL 统一解析为浏览器可访问的资产 URL。 */
 export function resolveAssetUrl(value?: string | null): string | undefined {
   if (!value) return undefined
   const trimmed = value.trim()
@@ -22,8 +24,6 @@ export function resolveAssetUrl(value?: string | null): string | undefined {
     return trimmed
   }
 
-  // 后端有些缩略图字段可能直接返回 file_id（不包含 / 或 :）。
-  // 这种情况下需要拼接下载地址，否则 new URL 会生成错误路径。
   if (!trimmed.includes('/') && !trimmed.includes(':')) {
     return buildFileDownloadUrl(trimmed)
   }
@@ -40,6 +40,7 @@ export function resolveAssetUrl(value?: string | null): string | undefined {
   }
 }
 
+/** 生成文件下载地址，用于画布节点和导出入口。 */
 export function buildFileDownloadUrl(fileId?: string | null): string | undefined {
   if (!fileId) return undefined
   return resolveAssetUrl(`/api/v1/studio/files/${encodeURIComponent(fileId)}/download`)

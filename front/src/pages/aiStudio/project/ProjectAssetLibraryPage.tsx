@@ -17,7 +17,7 @@ import {
   type AssetLibraryRelationRead,
   type ProjectAssetLibraryRead,
 } from '../../../services/generated'
-import { resolveAssetUrl } from '../asset-library/utils'
+import { resolveAssetUrl } from './assetUrls'
 
 type NodeKind = 'character' | 'bible' | 'voice' | 'scene'
 

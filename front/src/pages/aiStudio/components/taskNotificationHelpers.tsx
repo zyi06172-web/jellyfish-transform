@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Button, Space, notification } from 'antd'
 import type { ReactNode } from 'react'
-import type { RelationTaskState } from '../project/ProjectWorkbench/chapterDivisionTasks'
+import type { RelationTaskState } from './taskActionHelpers'
 import { useTaskUiStore } from './taskUiStore'
 
 const SETTLED_TASK_RETAIN_MS = 8000
@@ -21,7 +21,7 @@ type RelationTaskNotificationOptions = {
 }
 
 function formatElapsedMs(elapsedMs?: number | null): string | null {
-  if (elapsedMs == null || elapsedMs < 0) return null
+  if (elapsedMs === null || elapsedMs === undefined || elapsedMs < 0) return null
   const totalSeconds = Math.floor(elapsedMs / 1000)
   if (totalSeconds < 60) return `${totalSeconds} 秒`
   const minutes = Math.floor(totalSeconds / 60)
@@ -112,7 +112,7 @@ export function useRelationTaskNotification({
       sourceLabel,
       status: task.status,
       progress: task.progress,
-      cancelRequested: task.cancelRequested,
+      cancelRequested: Boolean(task.cancelRequested),
       startedAtTs: task.startedAtTs,
       finishedAtTs: task.finishedAtTs,
       elapsedMs: task.elapsedMs,

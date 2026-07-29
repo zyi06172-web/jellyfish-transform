@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { LlmService, StudioProjectsService } from '../../../services/generated'
 import type { ProjectStyleOptionsRead } from '../../../services/generated'
-import type { ProjectStyleFieldOptions } from './ProjectVisualStyleAndStyleFields'
+
+type ProjectStyleFieldOptions = {
+  visualStyles: OptionItem[]
+  stylesByVisual: Record<string, OptionItem[]>
+  defaultStyleByVisual: Record<string, string>
+}
 
 const FALLBACK_OPTIONS: ProjectStyleFieldOptions = {
   visualStyles: [

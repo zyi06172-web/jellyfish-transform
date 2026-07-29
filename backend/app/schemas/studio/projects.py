@@ -152,3 +152,28 @@ class ProjectAssetLibraryRead(BaseModel):
     characters: list[AssetLibraryItemRead] = Field(default_factory=list, description="角色资产")
     scenes: list[AssetLibraryItemRead] = Field(default_factory=list, description="场景资产")
     props: list[AssetLibraryItemRead] = Field(default_factory=list, description="道具资产")
+
+
+class ProjectCanvasViewport(BaseModel):
+    """React Flow 画布视口。"""
+
+    x: float = Field(0, description="视口 X 偏移")
+    y: float = Field(0, description="视口 Y 偏移")
+    zoom: float = Field(1, ge=0.1, le=2.5, description="缩放比例")
+
+
+class ProjectCanvasStateRead(BaseModel):
+    """项目画布持久化状态。"""
+
+    project_id: str = Field(..., description="项目 ID")
+    nodes: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 节点")
+    edges: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 连线")
+    viewport: ProjectCanvasViewport = Field(default_factory=ProjectCanvasViewport, description="画布视口")
+
+
+class ProjectCanvasStateUpdate(BaseModel):
+    """项目画布状态更新载荷。"""
+
+    nodes: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 节点")
+    edges: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 连线")
+    viewport: ProjectCanvasViewport = Field(default_factory=ProjectCanvasViewport, description="画布视口")

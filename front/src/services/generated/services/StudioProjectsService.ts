@@ -8,10 +8,12 @@ import type { ApiResponse_AgentWorkspaceSnapshotRead_ } from '../models/ApiRespo
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
 import type { ApiResponse_ProjectAssetLibraryRead_ } from '../models/ApiResponse_ProjectAssetLibraryRead_';
+import type { ApiResponse_ProjectCanvasStateRead_ } from '../models/ApiResponse_ProjectCanvasStateRead_';
 import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
 import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
 import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
 import type { ProjectCreate } from '../models/ProjectCreate';
+import type { ProjectCanvasStateUpdate } from '../models/ProjectCanvasStateUpdate';
 import type { ProjectFromPromptRequest } from '../models/ProjectFromPromptRequest';
 import type { ProjectUpdate } from '../models/ProjectUpdate';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -173,6 +175,52 @@ export class StudioProjectsService {
             path: {
                 'project_id': projectId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取项目画布状态
+     * @returns ApiResponse_ProjectCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStateGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_ProjectCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}/canvas-state',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 保存项目画布状态
+     * @returns ApiResponse_ProjectCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static updateProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStatePatch({
+        projectId,
+        requestBody,
+    }: {
+        projectId: string,
+        requestBody: ProjectCanvasStateUpdate,
+    }): CancelablePromise<ApiResponse_ProjectCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/studio/projects/{project_id}/canvas-state',
+            path: {
+                'project_id': projectId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

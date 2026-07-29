@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { AppstoreOutlined, HomeOutlined, PlaySquareOutlined, ProjectOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, FireOutlined, HomeOutlined, ProjectOutlined } from '@ant-design/icons'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { TaskRuntimeProvider } from '../pages/aiStudio/components/TaskRuntimeProvider'
 
@@ -14,7 +14,7 @@ const navItems: NavItem[] = [
   { key: 'home', label: '主页', href: '/projects', icon: <HomeOutlined /> },
   { key: 'projects', label: '项目', href: '/canvases', icon: <ProjectOutlined /> },
   { key: 'assets', label: '资产库', href: '/asset-library', icon: <AppstoreOutlined /> },
-  { key: 'tv', label: '社区TV', href: '/community-tv', icon: <PlaySquareOutlined /> },
+  { key: 'ranking', label: '热度排行榜', href: '/ranking', icon: <FireOutlined /> },
 ]
 
 /** 极简全局外壳：隐藏可见任务中心，同时保留任务运行上下文给业务页面使用。 */
@@ -22,7 +22,7 @@ const MainLayout: React.FC = () => {
   const location = useLocation()
 
   const activeKey = useMemo(() => {
-    if (location.pathname.startsWith('/community-tv')) return 'tv'
+    if (location.pathname.startsWith('/ranking')) return 'ranking'
     if (location.pathname.startsWith('/asset-library')) return 'assets'
     if (location.pathname.startsWith('/canvases')) return 'projects'
     if (location.pathname === '/projects') return 'home'

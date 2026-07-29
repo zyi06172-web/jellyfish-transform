@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.utils import apply_keyword_filter, apply_order, paginate
@@ -32,6 +34,9 @@ from app.services.common import (
 from app.schemas.studio.projects import (
     ProjectCreate,
     ProjectAssetLibraryRead,
+    ProjectCanvasStateRead,
+    ProjectCanvasStateUpdate,
+    ProjectCanvasViewport,
     ProjectFromPromptRead,
     ProjectFromPromptRequest,
     ProjectRead,
@@ -55,6 +60,18 @@ from app.services.studio.asset_library import build_project_asset_library
 router = APIRouter()
 
 PROJECT_ORDER_FIELDS = {"name", "created_at", "updated_at", "progress"}
+
+
+def _json_value(value, fallback):  # noqa: ANN001, ANN202
+    """兼容 MySQL JSON 字段在不同驱动下返回 str 或 Python 对象的差异。"""
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return fallback
+    return value
 
 
 def _build_project_style_options() -> tuple[dict[ProjectVisualStyle, list[ProjectStyle]], dict[ProjectVisualStyle, ProjectStyle]]:
@@ -282,6 +299,75 @@ async def get_project_asset_library(
 ) -> ApiResponse[ProjectAssetLibraryRead]:
     await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
     return success_response(await build_project_asset_library(db, project_id=project_id))
+
+
+@router.get(
+    "/{project_id}/canvas-state",
+    response_model=ApiResponse[ProjectCanvasStateRead],
+    summary="获取项目画布状态",
+)
+async def get_project_canvas_state(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectCanvasStateRead]:
+    """读取 React Flow 画布状态；没有保存记录时返回空画布默认值。"""
+    await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    result = await db.execute(
+        text(
+            """
+            SELECT nodes, edges, viewport
+            FROM project_canvas_states
+            WHERE project_id = :project_id
+            """
+        ),
+        {"project_id": project_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        return success_response(ProjectCanvasStateRead(project_id=project_id))
+    return success_response(
+        ProjectCanvasStateRead(
+            project_id=project_id,
+            nodes=_json_value(row["nodes"], []),
+            edges=_json_value(row["edges"], []),
+            viewport=ProjectCanvasViewport.model_validate(_json_value(row["viewport"], {})),
+        )
+    )
+
+
+@router.patch(
+    "/{project_id}/canvas-state",
+    response_model=ApiResponse[ProjectCanvasStateRead],
+    summary="保存项目画布状态",
+)
+async def update_project_canvas_state(
+    project_id: str,
+    body: ProjectCanvasStateUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectCanvasStateRead]:
+    """保存节点、连线与视口，让画布刷新后可恢复。"""
+    await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    payload = body.model_dump(mode="json")
+    await db.execute(
+        text(
+            """
+            INSERT INTO project_canvas_states (project_id, nodes, edges, viewport)
+            VALUES (:project_id, CAST(:nodes AS JSON), CAST(:edges AS JSON), CAST(:viewport AS JSON))
+            ON DUPLICATE KEY UPDATE
+              nodes = VALUES(nodes),
+              edges = VALUES(edges),
+              viewport = VALUES(viewport)
+            """
+        ),
+        {
+            "project_id": project_id,
+            "nodes": json.dumps(payload["nodes"], ensure_ascii=False),
+            "edges": json.dumps(payload["edges"], ensure_ascii=False),
+            "viewport": json.dumps(payload["viewport"], ensure_ascii=False),
+        },
+    )
+    await db.commit()
+    return success_response(ProjectCanvasStateRead(project_id=project_id, **payload))
 
 
 @router.get(

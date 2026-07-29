@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.9",
   "type": "module",
+  "engines": {
+    "node": ">=20 <21",
+    "pnpm": "9.15.9"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -13,16 +17,17 @@
     "preview": "vite preview",
     "openapi:fetch": "curl -sSf http://127.0.0.1:8000/openapi.json -o ./openapi.json",
     "openapi:gen": "pnpm exec -- openapi --input ./openapi.json --output ./src/services/generated --client fetch --useOptions --useUnionTypes",
-    "openapi:update": "pnpm run openapi:fetch && pnpm run openapi:gen"
+    "openapi:update": "corepack pnpm run openapi:fetch && corepack pnpm run openapi:gen"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "@xyflow/react": "^12.8.5",
     "antd": "^5.10.0",
     "axios": "^1.13.6",
     "i18next": "^23.11.4",
     "i18next-browser-languagedetector": "^7.2.1",
+    "jszip": "^3.10.1",
     "react": "^18.2.0",
-    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
     "react-i18next": "^15.0.1",
     "react-router-dom": "^6.30.3",
@@ -30,7 +35,6 @@
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
-    "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-dom": "^18.2.15",
     "@typescript-eslint/eslint-plugin": "^6.13.2",
     "@typescript-eslint/parser": "^6.13.2",

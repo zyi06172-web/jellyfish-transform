@@ -57,6 +57,7 @@ export type { ApiResponse_PaginatedData_ShotRead__ } from './models/ApiResponse_
 export type { ApiResponse_PaginatedData_TaskListItemRead__ } from './models/ApiResponse_PaginatedData_TaskListItemRead__';
 export type { ApiResponse_ProjectActorLinkRead_ } from './models/ApiResponse_ProjectActorLinkRead_';
 export type { ApiResponse_ProjectAssetLibraryRead_ } from './models/ApiResponse_ProjectAssetLibraryRead_';
+export type { ApiResponse_ProjectCanvasStateRead_ } from './models/ApiResponse_ProjectCanvasStateRead_';
 export type { ApiResponse_ProjectCostumeLinkRead_ } from './models/ApiResponse_ProjectCostumeLinkRead_';
 export type { ApiResponse_ProjectFromPromptRead_ } from './models/ApiResponse_ProjectFromPromptRead_';
 export type { ApiResponse_ProjectPropLinkRead_ } from './models/ApiResponse_ProjectPropLinkRead_';
@@ -161,6 +162,9 @@ export type { Pagination } from './models/Pagination';
 export type { ProjectActorLinkRead } from './models/ProjectActorLinkRead';
 export type { ProjectAssetLibraryRead } from './models/ProjectAssetLibraryRead';
 export type { ProjectAssetLinkCreate } from './models/ProjectAssetLinkCreate';
+export type { ProjectCanvasStateRead } from './models/ProjectCanvasStateRead';
+export type { ProjectCanvasStateUpdate } from './models/ProjectCanvasStateUpdate';
+export type { ProjectCanvasViewport } from './models/ProjectCanvasViewport';
 export type { ProjectCostumeLinkRead } from './models/ProjectCostumeLinkRead';
 export type { ProjectCreate } from './models/ProjectCreate';
 export type { ProjectFromPromptRead } from './models/ProjectFromPromptRead';

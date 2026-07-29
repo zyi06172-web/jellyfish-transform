@@ -1,7 +1,16 @@
 import { message } from 'antd'
 import { FilmService } from '../../../services/generated'
 import type { TaskStatus } from '../../../services/generated'
-import type { RelationTaskState } from '../project/ProjectWorkbench/chapterDivisionTasks'
+
+export type RelationTaskState = {
+  taskId: string
+  status: TaskStatus
+  progress: number
+  cancelRequested?: boolean
+  startedAtTs?: number | null
+  finishedAtTs?: number | null
+  elapsedMs?: number | null
+}
 
 type AsyncTaskCreateLike = {
   task_id: string

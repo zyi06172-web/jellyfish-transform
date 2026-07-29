@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import { StudioChaptersService, StudioShotsService } from '../../../services/generated'
 import { StudioEntitiesApi } from '../../../services/studioEntities'
-import { getChapterShotsPath, getChapterStudioPath } from '../project/ProjectWorkbench/routes'
 import type { TaskUiItem } from './taskUiStore'
 
 type ResolvedTaskMeta = {
@@ -19,10 +18,10 @@ const CHAPTER_RELATION_TYPES = new Set([
 ])
 
 const ASSET_EDIT_PATH_BUILDERS: Record<string, (id: string) => string> = {
-  actor_image: (id) => `/asset-library/actors/${id}/edit`,
-  scene_image: (id) => `/asset-library/scenes/${id}/edit`,
-  prop_image: (id) => `/asset-library/props/${id}/edit`,
-  costume_image: (id) => `/asset-library/costumes/${id}/edit`,
+  actor_image: () => '/asset-library',
+  scene_image: () => '/asset-library',
+  prop_image: () => '/asset-library',
+  costume_image: () => '/asset-library',
 }
 
 const ASSET_ENTITY_TYPES: Record<string, 'actor' | 'scene' | 'prop' | 'costume'> = {
@@ -61,7 +60,7 @@ async function resolveTaskMeta(task: TaskUiItem): Promise<ResolvedTaskMeta | nul
     if (!chapter) return null
     return {
       sourceLabel: chapter.title ? `章节：${chapter.title}` : `章节：${relationEntityId}`,
-      navigateTo: getChapterShotsPath(chapter.project_id, chapter.id),
+      navigateTo: `/projects/${chapter.project_id}`,
     }
   }
 
@@ -85,7 +84,7 @@ async function resolveTaskMeta(task: TaskUiItem): Promise<ResolvedTaskMeta | nul
       sourceLabel: shot.title
         ? `镜头：${shot.title}（第 ${shot.index} 镜）`
         : `镜头：${relationEntityId}`,
-      navigateTo: getChapterStudioPath(chapter.project_id, chapter.id),
+      navigateTo: `/projects/${chapter.project_id}`,
     }
   }
 
@@ -107,32 +106,14 @@ async function resolveTaskMeta(task: TaskUiItem): Promise<ResolvedTaskMeta | nul
                 ? '服装'
                 : '角色'
       const navigateTo =
-        entityType === 'character'
-          ? projectId
-            ? `/projects/${projectId}/roles/${relationEntityId}/edit`
-            : null
-          : entityType === 'actor'
-            ? `/asset-library/actors/${relationEntityId}/edit`
-            : entityType === 'scene'
-              ? `/asset-library/scenes/${relationEntityId}/edit`
-              : entityType === 'prop'
-                ? `/asset-library/props/${relationEntityId}/edit`
-                : `/asset-library/costumes/${relationEntityId}/edit`
+        projectId ? `/projects/${projectId}/asset-library` : '/asset-library'
       return {
         sourceLabel: name ? `${labelPrefix}：${name}` : `${labelPrefix}：${relationEntityId}`,
         navigateTo,
       }
     } catch {
       const navigateTo =
-        entityType === 'character'
-          ? null
-          : entityType === 'actor'
-            ? `/asset-library/actors/${relationEntityId}/edit`
-            : entityType === 'scene'
-              ? `/asset-library/scenes/${relationEntityId}/edit`
-              : entityType === 'prop'
-                ? `/asset-library/props/${relationEntityId}/edit`
-                : `/asset-library/costumes/${relationEntityId}/edit`
+        '/asset-library'
       return {
         sourceLabel: `${relationType}：${relationEntityId}`,
         navigateTo,

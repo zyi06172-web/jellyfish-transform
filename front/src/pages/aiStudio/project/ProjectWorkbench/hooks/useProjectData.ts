@@ -134,7 +134,7 @@ export function useChapters(projectId: string | undefined) {
 }
 
 export function useProjectCharacters(projectId: string | undefined) {
-  const [characters, setCharacters] = useState<any[]>([])
+  const [characters, setCharacters] = useState<Array<Record<string, unknown>>>([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -150,7 +150,7 @@ export function useProjectCharacters(projectId: string | undefined) {
         pageSize: 100,
         q: null,
       })
-      const items = (res.data?.items ?? []).filter((x) => x.project_id === projectId)
+      const items = ((res.data?.items ?? []) as Array<Record<string, unknown>>).filter((x) => x.project_id === projectId)
       setCharacters(items)
     } catch {
       setCharacters([])
