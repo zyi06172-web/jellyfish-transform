@@ -40,9 +40,22 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons'
 import { Alert, Button, Empty, Modal, Spin, Tag, message } from 'antd'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import JSZip from 'jszip'
-import { StudioProjectsService, type AgentWorkspaceSnapshotRead, type ProjectAssetLibraryRead } from '../../../../services/generated'
+import {
+  StudioChaptersService,
+  StudioImageTasksService,
+  StudioProjectsService,
+  StudioShotDetailsService,
+  StudioShotsService,
+  FilmService,
+  type AgentWorkspaceSnapshotRead,
+  type ChapterRead,
+  type ProjectAssetLibraryRead,
+  type ShotDetailRead,
+  type ShotLinkedAssetItem,
+  type ShotRead,
+} from '../../../../services/generated'
 import { AgentChat } from './agent/AgentChat'
 import { useProject } from './hooks/useProjectData'
 import { useWorkspaceSnapshot } from './useWorkspaceSnapshot'
@@ -375,6 +388,7 @@ const nodeTypes: NodeTypes = { nuwa: memo(NuwaNode) }
 
 function FlowInner({
   projectId,
+  chapterId,
   snapshot,
   library,
   onRefresh,
@@ -385,6 +399,7 @@ function FlowInner({
   agentError,
 }: {
   projectId: string
+  chapterId?: string | null
   snapshot: AgentWorkspaceSnapshotRead | null
   library: ProjectAssetLibraryRead | null
   onRefresh: () => void
@@ -403,16 +418,25 @@ function FlowInner({
   const [nodeMenu, setNodeMenu] = useState<NodeMenu>(null)
   const [preview, setPreview] = useState<CanvasNodeData | null>(null)
   const [hydrated, setHydrated] = useState(false)
+  const [materialBusy, setMaterialBusy] = useState(false)
 
   const autoGraph = useMemo(() => buildAutoNodes(snapshot, library), [library, snapshot])
+  const canvasScopeKey = chapterId ? `chapter:${chapterId}` : `project:${projectId}`
 
   const saveCanvas = useCallback((nextNodes: Node<CanvasNodeData>[], nextEdges: Edge[]) => {
     if (!hydrated) return
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
     saveTimer.current = window.setTimeout(() => {
       const viewport = flow.getViewport()
+      if (chapterId) {
+        void StudioChaptersService.updateChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStatePatch({
+          chapterId,
+          requestBody: { nodes: nextNodes, edges: nextEdges, viewport },
+        })
+        return
+      }
       if (typeof StudioProjectsService.updateProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStatePatch !== 'function') {
-        window.localStorage.setItem(`nuwa_canvas_state:${projectId}`, JSON.stringify({ nodes: nextNodes, edges: nextEdges, viewport }))
+        window.localStorage.setItem(`nuwa_canvas_state:${canvasScopeKey}`, JSON.stringify({ nodes: nextNodes, edges: nextEdges, viewport }))
         return
       }
       void StudioProjectsService.updateProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStatePatch({
@@ -420,14 +444,23 @@ function FlowInner({
         requestBody: { nodes: nextNodes, edges: nextEdges, viewport },
       })
     }, 500)
-  }, [flow, hydrated, projectId])
+  }, [canvasScopeKey, chapterId, flow, hydrated, projectId])
 
   useEffect(() => {
     let cancelled = false
     const hydrate = async () => {
       let saved: { nodes?: Node<CanvasNodeData>[]; edges?: Edge[]; viewport?: Viewport } | null = null
       try {
-        if (typeof StudioProjectsService.getProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStateGet === 'function') {
+        if (chapterId) {
+          const res = await StudioChaptersService.getChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStateGet({ chapterId })
+          saved = res.data
+            ? {
+                nodes: res.data.nodes as Node<CanvasNodeData>[] | undefined,
+                edges: res.data.edges as Edge[] | undefined,
+                viewport: res.data.viewport as Viewport | undefined,
+              }
+            : null
+        } else if (typeof StudioProjectsService.getProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStateGet === 'function') {
           const res = await StudioProjectsService.getProjectCanvasStateApiV1StudioProjectsProjectIdCanvasStateGet({ projectId })
           saved = res.data
             ? {
@@ -437,7 +470,7 @@ function FlowInner({
               }
             : null
         } else {
-          saved = JSON.parse(window.localStorage.getItem(`nuwa_canvas_state:${projectId}`) || 'null')
+          saved = JSON.parse(window.localStorage.getItem(`nuwa_canvas_state:${canvasScopeKey}`) || 'null')
         }
       } catch {
         saved = null
@@ -461,7 +494,7 @@ function FlowInner({
     return () => {
       cancelled = true
     }
-  }, [autoGraph.edges, autoGraph.nodes, flow, projectId])
+  }, [autoGraph.edges, autoGraph.nodes, canvasScopeKey, chapterId, flow, projectId])
 
   useEffect(() => {
     if (!hydrated) return
@@ -599,6 +632,180 @@ function FlowInner({
     })
   }, [edges, saveCanvas])
 
+  const referenceItems = useMemo<ShotLinkedAssetItem[]>(() => {
+    const toItem = (
+      type: ShotLinkedAssetItem['type'],
+      item: { id: string; name: string; reference_images?: Array<{ image_id?: number; file_id?: string | null; is_primary?: boolean }> },
+    ): ShotLinkedAssetItem | null => {
+      const image = (item.reference_images ?? []).find((row) => row.is_primary) ?? item.reference_images?.[0]
+      if (!image?.file_id) return null
+      return {
+        type,
+        id: item.id,
+        image_id: image.image_id ?? null,
+        file_id: image.file_id,
+        name: item.name,
+      }
+    }
+    return [
+      ...(library?.characters ?? []).map((item) => toItem('character', item)),
+      ...(library?.scenes ?? []).map((item) => toItem('scene', item)),
+      ...(library?.props ?? []).map((item) => toItem('prop', item)),
+    ].filter(Boolean) as ShotLinkedAssetItem[]
+  }, [library])
+
+  const loadChapterShots = useCallback(async (): Promise<Array<{ shot: ShotRead; detail: ShotDetailRead | null }>> => {
+    if (!chapterId) return []
+    const res = await StudioShotsService.listShotsApiV1StudioShotsGet({
+      chapterId,
+      page: 1,
+      pageSize: 100,
+      order: 'index',
+    })
+    const shots = res.data?.items ?? []
+    const rows = await Promise.all(shots.map(async (shot) => {
+      try {
+        const detailRes = await StudioShotDetailsService.getShotDetailApiV1StudioShotDetailsShotIdGet({ shotId: shot.id })
+        return { shot, detail: detailRes.data ?? null }
+      } catch {
+        return { shot, detail: null }
+      }
+    }))
+    return rows
+  }, [chapterId])
+
+  const framePromptForShot = useCallback((shot: ShotRead, detail: ShotDetailRead | null): string => {
+    const beats = detail?.action_beats?.length ? `动作拍点：${detail.action_beats.join('；')}。` : ''
+    return [
+      detail?.first_frame_prompt || shot.script_excerpt || shot.title,
+      `超写实电影级关键帧，严格只画这一秒画面，画幅 9:16，无文字、无分镜框。`,
+      `景别：${detail?.camera_shot ?? '按镜头信息'}；角度：${detail?.angle ?? '按镜头信息'}；运镜：${detail?.movement ?? '按镜头信息'}。`,
+      detail?.atmosphere ? `光影氛围：${detail.atmosphere}。` : '',
+      beats,
+    ].filter(Boolean).join('')
+  }, [])
+
+  /** 批量创建前 5 个内容格关键帧任务，复用现有 shot frame image task 后端接口。 */
+  const createFiveKeyframeTasks = useCallback(async () => {
+    if (!chapterId) {
+      message.warning('请先从 /canvases 进入某一集画布')
+      return
+    }
+    setMaterialBusy(true)
+    try {
+      const rows = (await loadChapterShots()).slice(0, 5)
+      if (!rows.length) {
+        message.warning('当前章节还没有镜头，请先让 Agent 完成拆分镜')
+        return
+      }
+      const created: string[] = []
+      for (const { shot, detail } of rows) {
+        const res = await StudioImageTasksService.createShotFrameImageGenerationTaskApiV1StudioImageTasksShotShotIdFrameImageTasksPost({
+          shotId: shot.id,
+          requestBody: {
+            frame_type: 'first',
+            prompt: framePromptForShot(shot, detail),
+            images: referenceItems,
+            target_ratio: '9:16',
+            resolution_profile: 'standard',
+          },
+        })
+        if (res.data?.task_id) created.push(res.data.task_id)
+      }
+      message.success(`已创建 ${created.length} 个关键帧任务，完成后刷新画布即可在关键帧节点下载`)
+      onText(`已确认生成视频素材：先为当前章节前 5 个内容格创建 ${created.length} 个 9:16 超写实关键帧任务。任务 ID：${created.join(', ')}`)
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '关键帧任务创建失败')
+    } finally {
+      setMaterialBusy(false)
+    }
+  }, [chapterId, framePromptForShot, loadChapterShots, onText, referenceItems])
+
+  /** 关键帧完成后逐镜头创建 Seedance 视频任务；花钱动作必须由用户点击触发。 */
+  const createSeedanceVideoTasks = useCallback(async () => {
+    if (!chapterId) {
+      message.warning('请先从 /canvases 进入某一集画布')
+      return
+    }
+    setMaterialBusy(true)
+    try {
+      const rows = await loadChapterShots()
+      if (!rows.length) {
+        message.warning('当前章节还没有镜头')
+        return
+      }
+      const created: string[] = []
+      for (const { shot, detail } of rows) {
+        const prompt = [
+          detail?.first_frame_prompt || shot.script_excerpt || shot.title,
+          `图生视频，时长 ${detail?.duration ?? 1} 秒，画幅 9:16。`,
+          `运动逻辑：${detail?.movement ?? '保持镜头运动连贯'}；动作拍点：${detail?.action_beats?.join('，') || '自然衔接'}。`,
+          `保持角色身份、服装、场景、光影不跳变，无水印、无畸形、无闪烁。`,
+        ].join('')
+        const res = await FilmService.createVideoGenerationTaskApiV1FilmTasksVideoPost({
+          requestBody: {
+            shot_id: shot.id,
+            reference_mode: 'first',
+            prompt,
+            images: [],
+            ratio: '9:16',
+          },
+        })
+        if (res.data?.task_id) created.push(res.data.task_id)
+      }
+      message.success(`已创建 ${created.length} 个 Seedance 视频任务`)
+      onText(`用户已确认花钱生成视频：按章节镜头创建 ${created.length} 个 Seedance 图生视频任务。任务 ID：${created.join(', ')}`)
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Seedance 视频任务创建失败，请确认关键帧已完成')
+    } finally {
+      setMaterialBusy(false)
+    }
+  }, [chapterId, loadChapterShots, onText])
+
+  const exportShotSheetPng = useCallback(async () => {
+    const rows = (await loadChapterShots()).slice(0, 5)
+    const canvas = document.createElement('canvas')
+    canvas.width = 1800
+    canvas.height = 1200
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.strokeStyle = '#111'
+    ctx.lineWidth = 3
+    ctx.font = '28px sans-serif'
+    const cellW = canvas.width / 3
+    const cellH = canvas.height / 2
+    for (let i = 0; i < 6; i += 1) {
+      const x = (i % 3) * cellW
+      const y = Math.floor(i / 3) * cellH
+      ctx.strokeRect(x + 12, y + 12, cellW - 24, cellH - 24)
+      ctx.fillStyle = '#111'
+      ctx.fillText(String(i + 1), x + 28, y + 52)
+      if (i === 5) continue
+      const row = rows[i]
+      const detail = row?.detail
+      ctx.fillStyle = '#f4f4f4'
+      ctx.fillRect(x + 28, y + 70, 190, cellH - 110)
+      ctx.strokeRect(x + 28, y + 70, 190, cellH - 110)
+      ctx.fillStyle = '#111'
+      const lines = [
+        `拍摄：${detail?.movement ?? ''}`,
+        `景别：${detail?.camera_shot ?? ''}`,
+        `情绪：${detail?.mood_tags?.join('，') ?? ''}`,
+        `运动：${detail?.action_beats?.join('；') ?? ''}`,
+        `氛围：${detail?.atmosphere ?? ''}`,
+      ]
+      lines.forEach((line, lineIndex) => {
+        ctx.fillText(line.slice(0, 20), x + 240, y + 104 + lineIndex * 72)
+      })
+    }
+    const link = document.createElement('a')
+    link.download = `shot-sheet-${chapterId ?? projectId}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }, [chapterId, loadChapterShots, projectId])
+
   /** 将节点级重生成请求交给 Agent Policy 处理，前端不直接调用模型或生成服务。 */
   const requestNodeRegenerate = useCallback((node: Node<CanvasNodeData>) => {
     const kindLabel =
@@ -664,7 +871,7 @@ function FlowInner({
         }}
         onMoveEnd={(_, viewport) => {
           saveCanvas(nodes, edges)
-          window.localStorage.setItem(`nuwa_canvas_viewport:${projectId}`, JSON.stringify(viewport))
+          window.localStorage.setItem(`nuwa_canvas_viewport:${canvasScopeKey}`, JSON.stringify(viewport))
         }}
       >
         <Background color="rgba(255,255,255,.11)" gap={28} variant={BackgroundVariant.Dots} />
@@ -687,6 +894,15 @@ function FlowInner({
         </Button>
         <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" icon={<ApiOutlined />} onClick={() => navigate(`/projects/${projectId}/asset-library`)}>
           资产库
+        </Button>
+        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" loading={materialBusy} onClick={() => void createFiveKeyframeTasks()}>
+          生成5张关键帧
+        </Button>
+        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" loading={materialBusy} onClick={() => void exportShotSheetPng()}>
+          导出分镜表PNG
+        </Button>
+        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" loading={materialBusy} onClick={() => void createSeedanceVideoTasks()}>
+          确认Seedance视频
         </Button>
       </div>
 
@@ -774,9 +990,12 @@ function FlowInner({
 
 const ProjectWorkbench: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
+  const [searchParams] = useSearchParams()
+  const chapterId = searchParams.get('chapterId')
   const { project, loading: projectLoading } = useProject(projectId)
   const { snapshot, loading, submitting, error, refresh, submitTurn } = useWorkspaceSnapshot(projectId)
   const [library, setLibrary] = useState<ProjectAssetLibraryRead | null>(null)
+  const [chapter, setChapter] = useState<ChapterRead | null>(null)
 
   useEffect(() => {
     if (!projectId) return
@@ -794,6 +1013,26 @@ const ProjectWorkbench: React.FC = () => {
       cancelled = true
     }
   }, [projectId, snapshot?.revision])
+
+  useEffect(() => {
+    if (!chapterId) {
+      setChapter(null)
+      return
+    }
+    let cancelled = false
+    const loadChapter = async () => {
+      try {
+        const res = await StudioChaptersService.getChapterApiV1StudioChaptersChapterIdGet({ chapterId })
+        if (!cancelled) setChapter(res.data ?? null)
+      } catch {
+        if (!cancelled) setChapter(null)
+      }
+    }
+    void loadChapter()
+    return () => {
+      cancelled = true
+    }
+  }, [chapterId])
 
   if (!projectId) {
     return <div className="flex h-[100dvh] items-center justify-center bg-black text-white">缺少项目 ID</div>
@@ -819,9 +1058,15 @@ const ProjectWorkbench: React.FC = () => {
           {submitting ? 'Agent 正在提交…' : '正在刷新工作台…'}
         </div>
       ) : null}
+      {chapterId ? (
+        <div className="pointer-events-none absolute left-6 top-6 z-20 rounded-full border border-white/12 bg-black px-4 py-2 text-xs text-white/72">
+          当前画布：{chapter?.title || chapterId}
+        </div>
+      ) : null}
       <ReactFlowProvider>
         <FlowInner
           projectId={projectId}
+          chapterId={chapterId}
           snapshot={snapshot}
           library={library}
           onRefresh={() => void refresh()}

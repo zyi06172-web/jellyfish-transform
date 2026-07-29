@@ -171,6 +171,16 @@ class ProjectCanvasStateRead(BaseModel):
     viewport: ProjectCanvasViewport = Field(default_factory=ProjectCanvasViewport, description="画布视口")
 
 
+class ChapterCanvasStateRead(BaseModel):
+    """章节画布持久化状态；一个章节就是一个剧集画布。"""
+
+    chapter_id: str = Field(..., description="章节/集 ID")
+    project_id: str = Field(..., description="项目/剧 ID")
+    nodes: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 节点")
+    edges: list[dict[str, Any]] = Field(default_factory=list, description="React Flow 连线")
+    viewport: ProjectCanvasViewport = Field(default_factory=ProjectCanvasViewport, description="画布视口")
+
+
 class ProjectCanvasStateUpdate(BaseModel):
     """项目画布状态更新载荷。"""
 

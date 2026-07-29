@@ -19,6 +19,7 @@ export type { ApiResponse_AgentTurnRead_ } from './models/ApiResponse_AgentTurnR
 export type { ApiResponse_AgentWorkspaceSnapshotRead_ } from './models/ApiResponse_AgentWorkspaceSnapshotRead_';
 export type { ApiResponse_AsyncTaskCreateRead_ } from './models/ApiResponse_AsyncTaskCreateRead_';
 export type { ApiResponse_ChapterCandidateAutoConfirmResultRead_ } from './models/ApiResponse_ChapterCandidateAutoConfirmResultRead_';
+export type { ApiResponse_ChapterCanvasStateRead_ } from './models/ApiResponse_ChapterCanvasStateRead_';
 export type { ApiResponse_ChapterRead_ } from './models/ApiResponse_ChapterRead_';
 export type { ApiResponse_CharacterPortraitAnalysisResult_ } from './models/ApiResponse_CharacterPortraitAnalysisResult_';
 export type { ApiResponse_CostumeInfoAnalysisResult_ } from './models/ApiResponse_CostumeInfoAnalysisResult_';
@@ -103,6 +104,7 @@ export type { CameraAngle } from './models/CameraAngle';
 export type { CameraMovement } from './models/CameraMovement';
 export type { CameraShotType } from './models/CameraShotType';
 export type { ChapterCandidateAutoConfirmResultRead } from './models/ChapterCandidateAutoConfirmResultRead';
+export type { ChapterCanvasStateRead } from './models/ChapterCanvasStateRead';
 export type { ChapterCreate } from './models/ChapterCreate';
 export type { ChapterRead } from './models/ChapterRead';
 export type { ChapterStatus } from './models/ChapterStatus';

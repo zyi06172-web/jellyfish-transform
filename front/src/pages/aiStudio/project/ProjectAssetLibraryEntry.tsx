@@ -5,6 +5,15 @@ import { AppstoreOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { StudioProjectsService, type ProjectRead } from '../../../services/generated'
 
+function withTimeout<T>(promise: Promise<T>, ms = 6000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error('request timeout')), ms)
+    }),
+  ])
+}
+
 /** 全局资产库入口：删掉 Jellyfish 老资产库后，跳转到最近项目的女娲版资产库。 */
 const ProjectAssetLibraryEntry: React.FC = () => {
   const navigate = useNavigate()
@@ -16,7 +25,7 @@ const ProjectAssetLibraryEntry: React.FC = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const res = await StudioProjectsService.listProjectsApiV1StudioProjectsGet({ page: 1, pageSize: 24 })
+        const res = await withTimeout(StudioProjectsService.listProjectsApiV1StudioProjectsGet({ page: 1, pageSize: 24 }))
         const items = res.data?.items ?? []
         if (cancelled) return
         setProjects(items)
@@ -33,10 +42,6 @@ const ProjectAssetLibraryEntry: React.FC = () => {
     }
   }, [navigate])
 
-  if (loading) {
-    return <div className="flex h-full items-center justify-center bg-black"><Spin /></div>
-  }
-
   return (
     <div className="relative flex h-full items-center justify-center bg-black px-8 text-white">
       <div className="nuwa-deep-space pointer-events-none fixed inset-0" />
@@ -46,7 +51,9 @@ const ProjectAssetLibraryEntry: React.FC = () => {
         <p className="mt-3 text-sm leading-relaxed text-white/52">
           女娲资产库是项目级能力。请选择一个画布项目进入角色、圣经、音色与场景卡片视图。
         </p>
-        {projects.length ? (
+        {loading ? (
+          <div className="mt-8 flex justify-center"><Spin /></div>
+        ) : projects.length ? (
           <div className="mt-6 grid gap-2">
             {projects.map((project) => (
               <Button key={project.id} className="!border-white/12 !bg-black !text-white" onClick={() => navigate(`/projects/${project.id}/asset-library`)}>

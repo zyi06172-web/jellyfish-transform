@@ -3,11 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { ApiResponse_ChapterCandidateAutoConfirmResultRead_ } from '../models/ApiResponse_ChapterCandidateAutoConfirmResultRead_';
+import type { ApiResponse_ChapterCanvasStateRead_ } from '../models/ApiResponse_ChapterCanvasStateRead_';
 import type { ApiResponse_ChapterRead_ } from '../models/ApiResponse_ChapterRead_';
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ChapterRead__ } from '../models/ApiResponse_PaginatedData_ChapterRead__';
 import type { ChapterCreate } from '../models/ChapterCreate';
 import type { ChapterUpdate } from '../models/ChapterUpdate';
+import type { ProjectCanvasStateUpdate } from '../models/ProjectCanvasStateUpdate';
 import type { ShotCandidateAutoConfirmRequest } from '../models/ShotCandidateAutoConfirmRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
@@ -97,6 +99,52 @@ export class StudioChaptersService {
             path: {
                 'chapter_id': chapterId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取章节画布状态
+     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStateGet({
+        chapterId,
+    }: {
+        chapterId: string,
+    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
+            path: {
+                'chapter_id': chapterId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 保存章节画布状态
+     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static updateChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStatePatch({
+        chapterId,
+        requestBody,
+    }: {
+        chapterId: string,
+        requestBody: ProjectCanvasStateUpdate,
+    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
+            path: {
+                'chapter_id': chapterId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },
