@@ -16,3 +16,5 @@ Agent 仍然是主路径。画布右侧常驻 `AgentChat`，继续调用 `GET /a
 画布状态主路径保存到后端表 `chapter_canvas_states`，通过 `GET/PATCH /api/v1/studio/chapters/{chapter_id}/canvas-state` 读写节点、连线和视口。`project_canvas_states` 仅保留给无 `chapterId` 的兼容入口使用。前端在接口不可用时使用 localStorage 兜底，但正式路径应以 OpenAPI generated client 调用后端接口。
 
 旧时间线视频编辑器已删除。视频节点、关键帧节点和分镜表节点负责提供本地下载入口：单个产物直接打开下载，多产物打包为 zip，供外部剪辑软件继续处理。画布顶部提供三个素材操作：生成前 5 个内容格的 9:16 关键帧任务、源码排版导出 6 格分镜表 PNG、在用户确认后调用 Seedance 视频任务接口。
+
+关键帧节点会按当前 `chapterId` 读取每个镜头的 `ShotDetail` 与 `ShotFrameImage` 记录，优先展示已落库的首帧/关键帧文件。视频节点优先读取 `Shot.generated_video_file_id`，再兜底读取 `GenerationTaskLink(resource_type=video, relation_type=video)` 的文件关联。分镜表 PNG 是前端源码排版生成：前 5 格左侧绘制真实关键帧，右侧读取真实结构化镜头字段；第 6 格保持空白。

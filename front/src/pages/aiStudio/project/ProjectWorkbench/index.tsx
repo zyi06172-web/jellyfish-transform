@@ -1,6 +1,7 @@
 import '@xyflow/react/dist/style.css'
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type React from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -46,6 +47,7 @@ import {
   StudioChaptersService,
   StudioImageTasksService,
   StudioProjectsService,
+  StudioShotFrameImagesService,
   StudioShotDetailsService,
   StudioShotsService,
   FilmService,
@@ -83,6 +85,13 @@ type CanvasNodeData = {
   downloadableUrls?: { name: string; url: string }[]
   onPreview?: (data: CanvasNodeData) => void
   onExport?: (data: CanvasNodeData) => void
+}
+
+type ChapterMaterialRow = {
+  shot: ShotRead
+  detail: ShotDetailRead | null
+  frameUrl?: string
+  videoUrl?: string
 }
 
 type CanvasMenu = {
@@ -165,6 +174,7 @@ function asShotGroup(value: unknown): Record<string, unknown> {
 function buildAutoNodes(
   snapshot: AgentWorkspaceSnapshotRead | null,
   library: ProjectAssetLibraryRead | null,
+  materials: ChapterMaterialRow[],
 ): { nodes: Node<CanvasNodeData>[]; edges: Edge[] } {
   const artifacts = snapshot?.artifacts ?? {}
   const page = findStoryboardPage(snapshot)
@@ -177,14 +187,20 @@ function buildAutoNodes(
   const panels = Array.isArray(pageRecord.panels) ? pageRecord.panels.map(asStoryboardPanel) : []
   const shots = Array.isArray(pageRecord.shots) ? pageRecord.shots.map(asShotGroup) : []
   const artifactRows = Object.values(artifacts) as unknown[]
-  const keyframeUrls = artifactRows
+  const keyframeUrls = [
+    ...materials.map((row) => row.frameUrl).filter(Boolean),
+    ...artifactRows
     .filter((row) => String(asRecord(row).kind ?? '').includes('frame') || String(asRecord(row).kind ?? '').includes('keyframe'))
     .map(fileUrlFromArtifact)
-    .filter(Boolean) as string[]
-  const videoUrls = artifactRows
+    .filter(Boolean),
+  ] as string[]
+  const videoUrls = [
+    ...materials.map((row) => row.videoUrl).filter(Boolean),
+    ...artifactRows
     .filter((row) => String(asRecord(row).kind ?? '').includes('video'))
     .map(fileUrlFromArtifact)
-    .filter(Boolean) as string[]
+    .filter(Boolean),
+  ] as string[]
 
   const nodes: Node<CanvasNodeData>[] = [
     {
@@ -236,7 +252,9 @@ function buildAutoNodes(
         title: '超写实关键帧',
         subtitle: keyframeUrls.length ? `${keyframeUrls.length} 张已渲染` : '等待逐格渲染',
         imageUrls: keyframeUrls,
-        body: '前 5 个内容格逐格渲染，一图两用：分镜表图 + Seedance 首尾帧。',
+        body: materials.length
+          ? materials.slice(0, 5).map((row, index) => `格 ${index + 1}: ${row.frameUrl ? '已有关键帧' : '等待渲染'} · ${row.detail?.camera_shot ?? '未配置景别'} · ${row.detail?.movement ?? '未配置运镜'}`).join('\n')
+          : '前 5 个内容格逐格渲染，一图两用：分镜表图 + Seedance 首尾帧。',
         downloadableUrls: keyframeUrls.map((url, index) => ({ name: `keyframe-${index + 1}.png`, url })),
       },
     },
@@ -248,8 +266,10 @@ function buildAutoNodes(
         kind: 'shot_sheet',
         title: '分镜表 PNG',
         subtitle: '6 格源码排版',
-        body: '前 5 格左图右列，第 6 格空白。导出入口在这里。',
-        downloadableUrls: storyboardImage ? [{ name: 'shot-sheet-source.png', url: storyboardImage }] : [],
+        body: materials.length
+          ? '前 5 格左侧使用已渲染关键帧，右侧读取真实镜头结构化字段；第 6 格空白。'
+          : '前 5 格左图右列，第 6 格空白。导出入口在这里。',
+        downloadableUrls: [],
       },
     },
     {
@@ -261,7 +281,9 @@ function buildAutoNodes(
         title: 'Seedance 视频片段',
         subtitle: videoUrls.length ? `${videoUrls.length} 条片段` : '等待生成',
         imageUrls: videoUrls,
-        body: '用户确认“是否进行视频生成”后，逐镜头生成可下载视频片段。',
+        body: materials.length
+          ? materials.map((row, index) => `镜头 ${index + 1}: ${row.videoUrl ? '已有视频片段' : '等待 Seedance'} · ${row.detail?.duration ?? 1}s`).join('\n')
+          : '用户确认“是否进行视频生成”后，逐镜头生成可下载视频片段。',
         downloadableUrls: videoUrls.map((url, index) => ({ name: `video-shot-${index + 1}.mp4`, url })),
       },
     },
@@ -386,6 +408,43 @@ function NuwaNode({ data, selected }: NodeProps<Node<CanvasNodeData>>) {
 
 const nodeTypes: NodeTypes = { nuwa: memo(NuwaNode) }
 
+function loadCanvasImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => resolve(image)
+    image.onerror = reject
+    image.src = src
+  })
+}
+
+function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines: number) {
+  const chars = Array.from(text)
+  let line = ''
+  let lineIndex = 0
+  for (const char of chars) {
+    const next = `${line}${char}`
+    if (ctx.measureText(next).width > maxWidth && line) {
+      ctx.fillText(line, x, y + lineIndex * lineHeight)
+      line = char
+      lineIndex += 1
+      if (lineIndex >= maxLines) return
+    } else {
+      line = next
+    }
+  }
+  if (line && lineIndex < maxLines) {
+    ctx.fillText(line, x, y + lineIndex * lineHeight)
+  }
+}
+
+function drawImageContain(ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) {
+  const scale = Math.min(width / image.width, height / image.height)
+  const drawW = image.width * scale
+  const drawH = image.height * scale
+  ctx.drawImage(image, x + (width - drawW) / 2, y + (height - drawH) / 2, drawW, drawH)
+}
+
 function FlowInner({
   projectId,
   chapterId,
@@ -419,8 +478,9 @@ function FlowInner({
   const [preview, setPreview] = useState<CanvasNodeData | null>(null)
   const [hydrated, setHydrated] = useState(false)
   const [materialBusy, setMaterialBusy] = useState(false)
+  const [materials, setMaterials] = useState<ChapterMaterialRow[]>([])
 
-  const autoGraph = useMemo(() => buildAutoNodes(snapshot, library), [library, snapshot])
+  const autoGraph = useMemo(() => buildAutoNodes(snapshot, library, materials), [library, materials, snapshot])
   const canvasScopeKey = chapterId ? `chapter:${chapterId}` : `project:${projectId}`
 
   const saveCanvas = useCallback((nextNodes: Node<CanvasNodeData>[], nextEdges: Edge[]) => {
@@ -674,6 +734,67 @@ function FlowInner({
     return rows
   }, [chapterId])
 
+  const loadChapterMaterials = useCallback(async (): Promise<ChapterMaterialRow[]> => {
+    const rows = await loadChapterShots()
+    const loaded = await Promise.all(rows.map(async ({ shot, detail }) => {
+      let frameUrl: string | undefined
+      if (detail?.id) {
+        try {
+          const frameRes = await StudioShotFrameImagesService.listShotFrameImagesApiV1StudioShotFrameImagesGet({
+            shotDetailId: detail.id,
+            page: 1,
+            pageSize: 10,
+            order: 'frame_type',
+          })
+          const frame = (frameRes.data?.items ?? []).find((item) => item.frame_type === 'first' && item.file_id)
+            ?? (frameRes.data?.items ?? []).find((item) => item.file_id)
+          frameUrl = frame?.file_id ? buildFileDownloadUrl(frame.file_id) : undefined
+        } catch {
+          frameUrl = undefined
+        }
+      }
+
+      let videoUrl = shot.generated_video_file_id ? buildFileDownloadUrl(shot.generated_video_file_id) : undefined
+      if (!videoUrl) {
+        try {
+          const linkRes = await FilmService.listTaskLinksApiV1FilmTaskLinksGet({
+            resourceType: 'video',
+            relationType: 'video',
+            relationEntityId: shot.id,
+            page: 1,
+            pageSize: 1,
+          })
+          const link = linkRes.data?.items?.find((item) => item.file_id)
+          videoUrl = link?.file_id ? buildFileDownloadUrl(link.file_id) : undefined
+        } catch {
+          videoUrl = undefined
+        }
+      }
+      return { shot, detail, frameUrl, videoUrl }
+    }))
+    return loaded
+  }, [loadChapterShots])
+
+  useEffect(() => {
+    if (!chapterId) {
+      setMaterials([])
+      return
+    }
+    let cancelled = false
+    const refreshMaterials = async () => {
+      try {
+        const rows = await loadChapterMaterials()
+        if (!cancelled) setMaterials(rows)
+      } catch {
+        if (!cancelled) setMaterials([])
+      }
+    }
+    void refreshMaterials()
+    return () => {
+      cancelled = true
+    }
+  }, [chapterId, loadChapterMaterials, snapshot?.revision])
+
   const framePromptForShot = useCallback((shot: ShotRead, detail: ShotDetailRead | null): string => {
     const beats = detail?.action_beats?.length ? `动作拍点：${detail.action_beats.join('；')}。` : ''
     return [
@@ -714,12 +835,13 @@ function FlowInner({
       }
       message.success(`已创建 ${created.length} 个关键帧任务，完成后刷新画布即可在关键帧节点下载`)
       onText(`已确认生成视频素材：先为当前章节前 5 个内容格创建 ${created.length} 个 9:16 超写实关键帧任务。任务 ID：${created.join(', ')}`)
+      setMaterials(await loadChapterMaterials())
     } catch (error) {
       message.error(error instanceof Error ? error.message : '关键帧任务创建失败')
     } finally {
       setMaterialBusy(false)
     }
-  }, [chapterId, framePromptForShot, loadChapterShots, onText, referenceItems])
+  }, [chapterId, framePromptForShot, loadChapterMaterials, loadChapterShots, onText, referenceItems])
 
   /** 关键帧完成后逐镜头创建 Seedance 视频任务；花钱动作必须由用户点击触发。 */
   const createSeedanceVideoTasks = useCallback(async () => {
@@ -755,27 +877,36 @@ function FlowInner({
       }
       message.success(`已创建 ${created.length} 个 Seedance 视频任务`)
       onText(`用户已确认花钱生成视频：按章节镜头创建 ${created.length} 个 Seedance 图生视频任务。任务 ID：${created.join(', ')}`)
+      setMaterials(await loadChapterMaterials())
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Seedance 视频任务创建失败，请确认关键帧已完成')
     } finally {
       setMaterialBusy(false)
     }
-  }, [chapterId, loadChapterShots, onText])
+  }, [chapterId, loadChapterMaterials, loadChapterShots, onText])
 
   const exportShotSheetPng = useCallback(async () => {
-    const rows = (await loadChapterShots()).slice(0, 5)
+    const rows = (materials.length ? materials : await loadChapterMaterials()).slice(0, 5)
     const canvas = document.createElement('canvas')
-    canvas.width = 1800
-    canvas.height = 1200
+    canvas.width = 2400
+    canvas.height = 1600
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.fillStyle = '#fff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.strokeStyle = '#111'
     ctx.lineWidth = 3
-    ctx.font = '28px sans-serif'
+    ctx.font = '30px sans-serif'
     const cellW = canvas.width / 3
     const cellH = canvas.height / 2
+    const loadedImages = await Promise.all(rows.map(async (row) => {
+      if (!row.frameUrl) return null
+      try {
+        return await loadCanvasImage(row.frameUrl)
+      } catch {
+        return null
+      }
+    }))
     for (let i = 0; i < 6; i += 1) {
       const x = (i % 3) * cellW
       const y = Math.floor(i / 3) * cellH
@@ -785,10 +916,23 @@ function FlowInner({
       if (i === 5) continue
       const row = rows[i]
       const detail = row?.detail
+      const imageX = x + 28
+      const imageY = y + 70
+      const imageW = 250
+      const imageH = cellH - 112
       ctx.fillStyle = '#f4f4f4'
-      ctx.fillRect(x + 28, y + 70, 190, cellH - 110)
-      ctx.strokeRect(x + 28, y + 70, 190, cellH - 110)
+      ctx.fillRect(imageX, imageY, imageW, imageH)
+      ctx.strokeRect(imageX, imageY, imageW, imageH)
+      const image = loadedImages[i]
+      if (image) {
+        drawImageContain(ctx, image, imageX + 6, imageY + 6, imageW - 12, imageH - 12)
+      } else {
+        ctx.fillStyle = '#888'
+        ctx.font = '24px sans-serif'
+        drawWrappedText(ctx, '等待关键帧', imageX + 52, imageY + imageH / 2, imageW - 80, 32, 2)
+      }
       ctx.fillStyle = '#111'
+      ctx.font = '24px sans-serif'
       const lines = [
         `拍摄：${detail?.movement ?? ''}`,
         `景别：${detail?.camera_shot ?? ''}`,
@@ -797,14 +941,14 @@ function FlowInner({
         `氛围：${detail?.atmosphere ?? ''}`,
       ]
       lines.forEach((line, lineIndex) => {
-        ctx.fillText(line.slice(0, 20), x + 240, y + 104 + lineIndex * 72)
+        drawWrappedText(ctx, line, x + 310, y + 104 + lineIndex * 118, cellW - 345, 30, 3)
       })
     }
     const link = document.createElement('a')
     link.download = `shot-sheet-${chapterId ?? projectId}.png`
     link.href = canvas.toDataURL('image/png')
     link.click()
-  }, [chapterId, loadChapterShots, projectId])
+  }, [chapterId, loadChapterMaterials, materials, projectId])
 
   /** 将节点级重生成请求交给 Agent Policy 处理，前端不直接调用模型或生成服务。 */
   const requestNodeRegenerate = useCallback((node: Node<CanvasNodeData>) => {
@@ -925,7 +1069,14 @@ function FlowInner({
             <FullscreenOutlined />
             <span>查看大图 / 详情</span>
           </button>
-          <button type="button" onClick={() => { void exportNode(nodeMenu.node.data); setNodeMenu(null) }}>
+          <button type="button" onClick={() => {
+            if (nodeMenu.node.data.kind === 'shot_sheet') {
+              void exportShotSheetPng()
+            } else {
+              void exportNode(nodeMenu.node.data)
+            }
+            setNodeMenu(null)
+          }}>
             <DownloadOutlined />
             <span>导出节点产物</span>
           </button>
@@ -971,9 +1122,17 @@ function FlowInner({
           ))}
           {preview?.body ? <pre className="whitespace-pre-wrap rounded-xl bg-black/[.04] p-4 text-sm leading-relaxed">{preview.body}</pre> : null}
           <div className="flex flex-wrap gap-2">
-            <Button icon={<DownloadOutlined />} onClick={() => preview && void exportNode(preview)}>
-              导出这个节点的产物
-            </Button>
+            {preview ? (
+              preview.kind === 'shot_sheet' ? (
+                <Button icon={<DownloadOutlined />} onClick={() => void exportShotSheetPng()}>
+                  导出分镜表 PNG
+                </Button>
+              ) : (
+                <Button icon={<DownloadOutlined />} onClick={() => void exportNode(preview)}>
+                  导出这个节点的产物
+                </Button>
+              )
+            ) : null}
             <Button icon={<ReloadOutlined />} onClick={() => {
               if (!preview) return
               onText(`请重新生成「${preview.title}」对应的局部产物，只更新这个节点，不回退阶段，不影响其他资产。`)
