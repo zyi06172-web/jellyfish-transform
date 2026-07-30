@@ -312,7 +312,7 @@ async def execute_agent_auto_elements_chain(
             await db.commit()
 
         await _complete_stage(db, session, AgentSessionStage.elements_gen)
-        await _finish_at_elements_review(db, session, image_task_ids=image_task_ids)
+        await _finish_at_elements_review(db, session, image_task_ids=image_task_ids, target_ratio=spec.aspect_ratio)
         chain_action.status = AgentActionStatus.succeeded
         chain_action.output = _json_safe({"chapter_id": chapter.id, "image_task_ids": image_task_ids, "target_ratio": spec.aspect_ratio})
         logger.info(
@@ -767,14 +767,20 @@ async def _load_storyboard_artifact(db: AsyncSession, *, project_id: str) -> dic
     return artifact.content_json
 
 
-async def _finish_at_elements_review(db: AsyncSession, session: AgentSession, *, image_task_ids: list[str]) -> None:
+async def _finish_at_elements_review(
+    db: AsyncSession,
+    session: AgentSession,
+    *,
+    image_task_ids: list[str],
+    target_ratio: str,
+) -> None:
     await _advance_stage(session, AgentSessionStage.elements_review)
     session.status = AgentSessionStatus.waiting_user
     await _append_task_update(
         db,
         session_id=session.id,
         content="关键元素图已生成，请确认是否进入下一批。",
-        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "16:9"},
+        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": target_ratio},
     )
     message = AgentMessage(
         id=_new_id("agent_message"),
@@ -783,7 +789,7 @@ async def _finish_at_elements_review(db: AsyncSession, session: AgentSession, *,
         role=AgentMessageRole.assistant,
         kind=AgentMessageKind.question_card,
         content="关键元素图已生成，请确认是否进入下一批。",
-        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "16:9"},
+        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": target_ratio},
     )
     db.add(message)
     await db.flush()

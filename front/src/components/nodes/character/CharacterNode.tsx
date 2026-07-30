@@ -65,7 +65,7 @@ function CharacterNodeBase({ id, data, selected }: NodeProps) {
 function ImageSlot({ label, url, large }: { label: string; url?: string; large?: boolean }) {
   return (
     <div className={large ? 'nuwa-image-slot-large' : 'nuwa-image-slot'} style={{ aspectRatio: large ? '1 / 1' : '2 / 3' }}>
-      {url ? <img src={url} alt={label} /> : <NodeEmptyState label={`补渲${label}`} />}
+      {url ? <img src={url} alt={label} /> : <NodeEmptyState label="补渲这一张" />}
       <span>{label}</span>
     </div>
   )

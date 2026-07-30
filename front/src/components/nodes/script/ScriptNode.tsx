@@ -10,8 +10,8 @@ import { NodeEmptyState } from '../NodeStates'
 function ScriptNodeBase({ id, data, selected }: NodeProps) {
   const nodeData = data as ScriptNodeData
   const characters = nodeData.parsed?.characters ?? []
-  const hasStory = Boolean(nodeData.parsed?.story_structure)
-  const hasShots = Boolean(nodeData.parsed?.shots_info)
+  const hasStory = hasContent(nodeData.parsed?.story_structure)
+  const hasShots = hasContent(nodeData.parsed?.shots_info)
 
   return (
     <NodeLayout
@@ -46,6 +46,12 @@ function ScriptNodeBase({ id, data, selected }: NodeProps) {
       )}
     </NodeLayout>
   )
+}
+
+function hasContent(value: unknown) {
+  if (Array.isArray(value)) return value.length > 0
+  if (value && typeof value === 'object') return Object.keys(value as Record<string, unknown>).length > 0
+  return Boolean(value)
 }
 
 export const ScriptNode = memo(ScriptNodeBase)

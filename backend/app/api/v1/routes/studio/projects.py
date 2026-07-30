@@ -11,11 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
-from app.models.studio import AgentArtifact, AgentMessage, AgentSession, Chapter, Project
+from app.models.studio import AgentAction, AgentArtifact, AgentCheckpoint, AgentMessage, AgentSession, Chapter, Project
 from app.models.types import (
+    AgentActionStatus,
     AgentActionType,
     AgentArtifactKind,
     AgentArtifactStatus,
+    AgentCheckpointStatus,
     ChapterStatus,
     AgentMessageKind,
     AgentMessageRole,
@@ -355,7 +357,11 @@ async def handle_project_agent_turn(
             await _persist_intake_script(
                 db,
                 project_id=project_id,
+                session_id=body.session_id,
                 raw_script=str(action.input.get("raw_script") or body.input.text or ""),
+                action_idempotency_key=(
+                    f"{body.idempotency_key}:{action.action_type.value}:{action.target_type}:{action.target_id}:{index}"
+                ),
             )
         if action.action_type == AgentActionType.regenerate_target and action.target_type == "character":
             await regenerate_element_image(
@@ -620,13 +626,21 @@ def _message_to_read(message) -> AgentMessageRead:  # noqa: ANN001
     )
 
 
-async def _persist_intake_script(db: AsyncSession, *, project_id: str, raw_script: str) -> None:
-    """把画布对话框贴入的剧本落到章节与 artifact，供 script 节点恢复。"""
+async def _persist_intake_script(
+    db: AsyncSession,
+    *,
+    project_id: str,
+    session_id: str,
+    raw_script: str,
+    action_idempotency_key: str,
+) -> None:
+    """把画布对话框贴入的剧本落库，并创建进入严格解析链路的确认点。"""
     script = raw_script.strip()
     if not script:
         return
     project = await db.get(Project, project_id)
-    if project is None:
+    session = await db.get(AgentSession, session_id)
+    if project is None or session is None or session.project_id != project_id:
         return
     chapter = (
         await db.execute(
@@ -682,7 +696,99 @@ async def _persist_intake_script(db: AsyncSession, *, project_id: str, raw_scrip
         "source_prompt": script,
         "script_artifact_id": artifact.id,
     }
+    await _mark_agent_action_succeeded(
+        db,
+        session_id=session.id,
+        idempotency_key=action_idempotency_key,
+        output={"script_artifact_id": artifact.id, "stage": AgentSessionStage.spec_review.value},
+    )
+    await _supersede_pending_checkpoints(db, session_id=session.id)
+    message = AgentMessage(
+        id=f"agent_message_{uuid.uuid4().hex}",
+        session_id=session.id,
+        sequence=int(await db.scalar(select(func.max(AgentMessage.sequence)).where(AgentMessage.session_id == session.id)) or 0) + 1,
+        role=AgentMessageRole.assistant,
+        kind=AgentMessageKind.question_card,
+        content="已收到剧本。确认后我会调用现有 script_divider_agent 严格按原文拆分镜，并继续提取人物、场景、道具资产与手绘故事板。",
+        payload={"stage": AgentSessionStage.spec_review.value, "script_artifact_id": artifact.id},
+    )
+    db.add(message)
+    await db.flush()
+    db.add(
+        AgentCheckpoint(
+            id=f"agent_checkpoint_{uuid.uuid4().hex}",
+            session_id=session.id,
+            stage=AgentSessionStage.spec_review,
+            status=AgentCheckpointStatus.pending,
+            question="确认进入正式解析与资产生成流程？",
+            options=[
+                {
+                    "id": "confirm-script-and-start",
+                    "label": "确认，开始解析",
+                    "effect": "confirm_and_advance",
+                    "payload": {"script_artifact_id": artifact.id},
+                },
+                {
+                    "id": "revise-script",
+                    "label": "我再补充剧本",
+                    "effect": "stay_and_collect_feedback",
+                    "payload": {"script_artifact_id": artifact.id},
+                },
+            ],
+            message_id=message.id,
+        )
+    )
+    state = session.state or {}
+    completed = set(state.get("completed_stages") or [])
+    completed.add(AgentSessionStage.intake.value)
+    session.current_stage = AgentSessionStage.spec_review
+    session.status = AgentSessionStatus.waiting_user
+    session.revision += 1
+    session.state = {
+        **state,
+        "completed_stages": sorted(completed),
+        "script_artifact_id": artifact.id,
+        "pending_stage": AgentSessionStage.spec_review.value,
+    }
     await db.commit()
+
+
+async def _mark_agent_action_succeeded(
+    db: AsyncSession,
+    *,
+    session_id: str,
+    idempotency_key: str,
+    output: dict,
+) -> None:
+    """把同步完成的 Agent 动作收口，避免后续 turn 被 running guard 误拦。"""
+    action = (
+        await db.execute(
+            select(AgentAction)
+            .where(
+                AgentAction.session_id == session_id,
+                AgentAction.idempotency_key == idempotency_key,
+            )
+            .limit(1)
+        )
+    ).scalars().first()
+    if action is None:
+        return
+    action.status = AgentActionStatus.succeeded
+    action.output = output
+
+
+async def _supersede_pending_checkpoints(db: AsyncSession, *, session_id: str) -> None:
+    """作废旧问题卡，保证 AgentDock 每次只响应最新确认点。"""
+    rows = (
+        await db.execute(
+            select(AgentCheckpoint).where(
+                AgentCheckpoint.session_id == session_id,
+                AgentCheckpoint.status == AgentCheckpointStatus.pending,
+            )
+        )
+    ).scalars().all()
+    for row in rows:
+        row.status = AgentCheckpointStatus.superseded
 
 
 def _artifact_kind_for_canvas_action(action: str) -> AgentArtifactKind:

@@ -1,6 +1,7 @@
 import { ReloadOutlined, TableOutlined } from '@ant-design/icons'
 import type { NodeProps } from '@xyflow/react'
 import { memo } from 'react'
+import { Alert } from 'antd'
 import { NODE_WIDTH, type StoryboardNodeData, type StoryboardPanel } from '../../../pages/Canvas/types'
 import { NodeLayout } from '../NodeLayout'
 import { NodeEmptyState } from '../NodeStates'
@@ -19,6 +20,7 @@ function StoryboardNodeBase({ id, data, selected }: NodeProps) {
   const nodeData = data as StoryboardNodeData
   const page = nodeData.content_json?.pages?.[0]
   const panels = visiblePanels(page?.panels)
+  const durationWarning = Boolean(page?.duration_warning || panels.some((panel) => !panel.is_blank && Number(panel.duration || 1) > 5))
 
   return (
     <NodeLayout
@@ -38,6 +40,9 @@ function StoryboardNodeBase({ id, data, selected }: NodeProps) {
         { key: 'shotlist', icon: <TableOutlined />, tooltip: '下一步：分镜表', onClick: () => undefined },
       ]}
     >
+      {durationWarning ? (
+        <Alert className="mb-3" type="warning" showIcon message="长镜头暂不支持，请拆分" />
+      ) : null}
       <div className="nuwa-storyboard-grid">
         {panels.map((panel) => (
           <div key={panel.index} className="nuwa-storyboard-cell">

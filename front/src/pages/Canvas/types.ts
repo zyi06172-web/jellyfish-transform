@@ -92,6 +92,7 @@ export type StoryboardPanel = {
   index: number
   one_sentence_summary: string
   six_elements_for_video_model?: Record<string, unknown>
+  duration?: number
   is_blank?: boolean
 }
 
@@ -100,6 +101,7 @@ export type StoryboardNodeData = BaseCanvasNodeData & {
     pages?: Array<{
       image_url?: string
       image_file_id?: string
+      duration_warning?: boolean
       panels?: StoryboardPanel[]
     }>
   }

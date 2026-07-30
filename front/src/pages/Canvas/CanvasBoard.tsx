@@ -21,11 +21,9 @@ import {
 import { Alert, Button, Modal, Spin, Tag, message } from 'antd'
 import { ApiOutlined, DownloadOutlined, FullscreenOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
-  LlmService,
   StudioChaptersService,
   StudioProjectsService,
   type AgentWorkspaceSnapshotRead,
-  type ModelRead,
   type ProjectAssetLibraryRead,
   type ProjectRead,
 } from '../../services/generated'
@@ -35,6 +33,8 @@ import { DEFAULT_CANVAS_RATIO, type NuwaCanvasNodeData } from './types'
 import { useAutoLayout } from './hooks/useAutoLayout'
 import { useGenerationCost } from './hooks/useGenerationCost'
 import { useNodeOperations } from './hooks/useNodeOperations'
+import { buildInitialGraph, mergeBackendGraph, persistableNodes, savedLooksLikeBatch6 } from './graphBuilder'
+import { useCanvasModelStatus } from './hooks/useCanvasModelStatus'
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 0.62 }
 
@@ -56,36 +56,9 @@ const ALLOWED_CONNECTIONS = new Set([
   'shotlist_render->video',
 ])
 
-function nowIso() {
-  return new Date().toISOString()
-}
-
 function newIdempotencyKey(prefix: string) {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return `${prefix}:${crypto.randomUUID()}`
   return `${prefix}:${Date.now()}:${Math.random().toString(16).slice(2)}`
-}
-
-function savedLooksLikeBatch6(nodes?: Node[]) {
-  const nodeTypesInState = new Set((nodes ?? []).map((node) => node.type))
-  return nodeTypesInState.has('script') && nodeTypesInState.has('video')
-}
-
-function storyboardPanels(snapshot: AgentWorkspaceSnapshotRead | null) {
-  const artifacts = Object.values(snapshot?.artifacts ?? {}) as Array<{ content_json?: Record<string, unknown> }>
-  for (const artifact of artifacts) {
-    const content = artifact.content_json ?? {}
-    const pages = Array.isArray(content.pages) ? content.pages : []
-    const page = pages.find((item) => item && typeof item === 'object')
-    if (page) return { pages: [page as Record<string, unknown>] }
-  }
-  return undefined
-}
-
-function persistableNodes(nodes: Node<NuwaCanvasNodeData>[]) {
-  return nodes.map((node) => {
-    const { __ops: _ops, ...data } = node.data
-    return { ...node, data }
-  })
 }
 
 /** CanvasBoard 承载 ReactFlow 画布、保存恢复、连线规则和画布内 AgentDock。 */
@@ -122,12 +95,7 @@ export function CanvasBoard({
   const [edges, setEdges] = useState<Edge[]>([])
   const [hydrated, setHydrated] = useState(false)
   const [agentCollapsed, setAgentCollapsed] = useState(false)
-  const [modelStatus, setModelStatus] = useState<{ text: boolean; image: boolean; video: boolean; labels: string[] }>({
-    text: false,
-    image: false,
-    video: false,
-    labels: [],
-  })
+  const modelStatus = useCanvasModelStatus()
   const canvasId = chapterId ? `chapter:${chapterId}` : `project:${projectId}`
   const aspectRatio = project?.default_video_ratio || DEFAULT_CANVAS_RATIO
   const operations = useNodeOperations({
@@ -138,105 +106,15 @@ export function CanvasBoard({
     setEdges,
   })
 
-  const initialGraph = useMemo(() => {
-    const base = {
-      project_id: projectId,
-      canvas_id: canvasId,
-      status: 'empty' as const,
-      created_at: nowIso(),
-    }
-    const character = library?.characters?.[0]
-    const scene = library?.scenes?.[0]
-    const prop = library?.props?.[0]
-    const builtNodes: Node<NuwaCanvasNodeData>[] = [
-      {
-        id: 'script',
-        type: 'script',
-        position: positionFor('script', 0),
-        data: {
-          ...base,
-          status: snapshot?.artifacts?.['story_summary:v1'] ? 'ready' : 'empty',
-          title: '剧本 · 第1章',
-          raw_script: snapshot?.artifacts?.['story_summary:v1']?.content_text || '',
-          parsed: {
-            story_structure: snapshot?.artifacts?.['story_summary:v1']?.content_json,
-            characters: library?.characters?.map((item) => item.name) ?? [],
-            shots_info: snapshot?.artifacts?.['storyboard:v1']?.content_json,
-          },
-        },
-      },
-      {
-        id: character ? `character:${character.id}` : 'character:empty',
-        type: 'character',
-        position: positionFor('character', 0),
-        data: {
-          ...base,
-          status: character ? 'ready' : 'empty',
-          name: character?.name || '待生成角色',
-          character_id: character?.id,
-          bible_json: character?.bible,
-          reference_layout: 'four_view',
-          linked_existing: false,
-          images: {
-            face_closeup: character?.reference_images?.[0]?.url,
-            full_front: character?.reference_images?.[1]?.url,
-            full_side: character?.reference_images?.[2]?.url,
-            full_back: character?.reference_images?.[3]?.url,
-          },
-        },
-      },
-      {
-        id: scene ? `location:${scene.id}` : 'location:empty',
-        type: 'location',
-        position: positionFor('location', 1),
-        data: {
-          ...base,
-          status: scene ? 'ready' : 'empty',
-          name: scene?.name || '待生成场景',
-          location_id: scene?.id,
-          mood: scene?.description,
-          subtitle: aspectRatio,
-          images: scene?.reference_images?.map((item) => item.url).filter(Boolean) ?? [],
-        },
-      },
-      {
-        id: prop ? `prop:${prop.id}` : 'prop:empty',
-        type: 'prop',
-        position: positionFor('prop', 2),
-        data: {
-          ...base,
-          status: prop ? 'ready' : 'empty',
-          name: prop?.name || '待生成道具',
-          prop_id: prop?.id,
-          is_wearable: false,
-          image: prop?.reference_images?.[0]?.url,
-        },
-      },
-      {
-        id: 'storyboard',
-        type: 'storyboard',
-        position: positionFor('storyboard', 0),
-        data: { ...base, status: storyboardPanels(snapshot) ? 'ready' : 'empty', content_json: storyboardPanels(snapshot) },
-      },
-      { id: 'shot_group', type: 'shot_group', position: positionFor('shot_group', 0), data: { ...base, shots: [] } },
-      { id: 'shotlist_text', type: 'shotlist_text', position: positionFor('shotlist_text', 1), data: { ...base, rows: [] } },
-      { id: 'keyframe', type: 'keyframe', position: positionFor('keyframe', 0), data: { ...base, seed: project?.seed || 0, frames: [] } },
-      { id: 'shotlist_render', type: 'shotlist_render', position: positionFor('shotlist_render', 0), data: { ...base, rows: [] } },
-      { id: 'video', type: 'video', position: positionFor('video', 0), data: { ...base, aspect_ratio: aspectRatio } },
-    ]
-    const builtEdges: Edge[] = [
-      { id: 'script-character', source: 'script', target: builtNodes[1].id },
-      { id: 'script-location', source: 'script', target: builtNodes[2].id },
-      { id: 'script-prop', source: 'script', target: builtNodes[3].id },
-      { id: 'script-storyboard', source: 'script', target: 'storyboard', animated: true },
-      { id: 'storyboard-shotlist-text', source: 'storyboard', target: 'shotlist_text', animated: true },
-      { id: 'storyboard-shot-group', source: 'storyboard', target: 'shot_group', animated: true },
-      { id: 'shotlist-text-keyframe', source: 'shotlist_text', target: 'keyframe', animated: true },
-      { id: 'keyframe-shotlist-render', source: 'keyframe', target: 'shotlist_render', animated: true },
-      { id: 'shotlist-render-video', source: 'shotlist_render', target: 'video', animated: true },
-    ]
-    return { nodes: builtNodes, edges: builtEdges }
-  }, [aspectRatio, canvasId, library, positionFor, project?.seed, projectId, snapshot])
+  const initialGraph = useMemo(() => buildInitialGraph({
+    projectId,
+    canvasId,
+    aspectRatio,
+    library,
+    snapshot,
+    projectSeed: project?.seed,
+    positionFor,
+  }), [aspectRatio, canvasId, library, positionFor, project?.seed, projectId, snapshot])
 
   const saveCanvas = useCallback((nextNodes: Node<NuwaCanvasNodeData>[], nextEdges: Edge[]) => {
     if (!hydrated) return
@@ -269,8 +147,9 @@ export function CanvasBoard({
         const savedEdges = (res.data?.edges ?? []) as Edge[]
         if (cancelled) return
         if (savedLooksLikeBatch6(savedNodes)) {
-          setNodes(savedNodes)
-          setEdges(savedEdges)
+          const merged = mergeBackendGraph(savedNodes, savedEdges, initialGraph.nodes, initialGraph.edges)
+          setNodes(merged.nodes)
+          setEdges(merged.edges)
           window.setTimeout(() => flow.setViewport({
             x: res.data?.viewport?.x ?? DEFAULT_VIEWPORT.x,
             y: res.data?.viewport?.y ?? DEFAULT_VIEWPORT.y,
@@ -295,42 +174,17 @@ export function CanvasBoard({
     return () => { cancelled = true }
   }, [chapterId, flow, initialGraph.edges, initialGraph.nodes, projectId])
 
-  useEffect(() => {
-    let cancelled = false
-    const loadModelStatus = async () => {
-      try {
-        const [settingsRes, modelsRes] = await Promise.all([
-          LlmService.getModelSettingsApiV1LlmModelSettingsGet(),
-          LlmService.listModelsApiV1LlmModelsGet({ page: 1, pageSize: 100 }),
-        ])
-        if (cancelled) return
-        const settings = settingsRes.data
-        const models = (modelsRes.data?.items ?? []) as ModelRead[]
-        const byId = new Map(models.map((model) => [model.id, model]))
-        const text = Boolean(settings?.default_text_model_id && byId.get(settings.default_text_model_id))
-        const image = Boolean(settings?.default_image_model_id && byId.get(settings.default_image_model_id))
-        const video = Boolean(settings?.default_video_model_id && byId.get(settings.default_video_model_id))
-        setModelStatus({
-          text,
-          image,
-          video,
-          labels: [
-            byId.get(settings?.default_text_model_id || '')?.name || 'DeepSeek 未绑定',
-            byId.get(settings?.default_image_model_id || '')?.name || 'Seedream 未绑定',
-            byId.get(settings?.default_video_model_id || '')?.name || 'Seedance 未绑定',
-          ],
-        })
-      } catch {
-        if (!cancelled) setModelStatus({ text: false, image: false, video: false, labels: ['模型配置读取失败'] })
-      }
-    }
-    void loadModelStatus()
-    return () => { cancelled = true }
-  }, [])
-
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((current) => {
-      const next = applyNodeChanges(changes, current) as Node<NuwaCanvasNodeData>[]
+      const movedIds = new Set<string>(
+        changes
+          .filter((change) => change.type === 'position' && 'dragging' in change && change.dragging === false)
+          .map((change) => ('id' in change ? change.id : ''))
+          .filter(Boolean),
+      )
+      const next = (applyNodeChanges(changes, current) as Node<NuwaCanvasNodeData>[]).map((node) => (
+        movedIds.has(node.id) ? { ...node, data: { ...node.data, pinned: true } } : node
+      ))
       saveCanvas(next, edges)
       return next
     })

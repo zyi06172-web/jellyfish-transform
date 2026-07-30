@@ -32,7 +32,7 @@ INTENT_TO_ACTION: dict[str, AgentActionType] = {
 }
 
 ACTION_ALLOWED_STAGE: dict[AgentActionType, frozenset[AgentSessionStage]] = {
-    AgentActionType.analyze: frozenset({AgentSessionStage.intake}),
+    AgentActionType.analyze: frozenset({AgentSessionStage.intake, AgentSessionStage.spec_review}),
     AgentActionType.divide_shots: frozenset({AgentSessionStage.storyboard}),
     AgentActionType.design_storyboard: frozenset({AgentSessionStage.storyboard}),
     AgentActionType.extract_assets: frozenset({AgentSessionStage.extract}),
