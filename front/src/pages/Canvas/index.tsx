@@ -12,6 +12,15 @@ import {
 import { useWorkspaceSnapshot } from '../aiStudio/project/ProjectWorkbench/useWorkspaceSnapshot'
 import { CanvasBoard } from './CanvasBoard'
 
+/** unwrapApiData 兼容 OpenAPI 响应外壳与测试环境中直接返回 data 的两种形态。 */
+function unwrapApiData<T>(response: { data?: T | null } | T | null | undefined): T | null {
+  if (!response) return null
+  if (typeof response === 'object' && 'data' in response) {
+    return (response as { data?: T | null }).data ?? null
+  }
+  return response as T
+}
+
 /** CanvasPage 是第6批新画布页外壳；旧项目路由会指向这里。 */
 export default function CanvasPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -34,8 +43,8 @@ export default function CanvasPage() {
           StudioProjectsService.getProjectAssetLibraryApiV1StudioProjectsProjectIdAssetLibraryGet({ projectId }),
         ])
         if (!cancelled) {
-          setProject(projectRes.data ?? null)
-          setLibrary(libraryRes.data ?? null)
+          setProject(unwrapApiData(projectRes))
+          setLibrary(unwrapApiData(libraryRes))
         }
         if (chapterId) {
           const chapterRes = await StudioChaptersService.getChapterApiV1StudioChaptersChapterIdGet({ chapterId })

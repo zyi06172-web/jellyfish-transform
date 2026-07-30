@@ -26,9 +26,9 @@ function VideoNodeBase({ id, data, selected }: NodeProps) {
       handles={{ target: true, source: false }}
       data={nodeData}
       toolbar={[
-        { key: 'rerender', icon: <ReloadOutlined />, tooltip: '重出为新节点', onClick: () => undefined },
+        { key: 'rerender', icon: <ReloadOutlined />, tooltip: '重出为新节点', onClick: () => nodeData.__ops?.derive(id, { status: 'loading', title: '视频生成 · 新版本', url: undefined } as Partial<VideoNodeData>) },
         { key: 'prompt', icon: <EyeOutlined />, tooltip: '看提示词', onClick: () => setPromptOpen(true) },
-        { key: 'download', icon: <DownloadOutlined />, tooltip: '下载视频', onClick: () => undefined },
+        { key: 'download', icon: <DownloadOutlined />, tooltip: '下载视频', onClick: () => { if (nodeData.url) window.open(nodeData.url, '_blank') } },
       ]}
     >
       {nodeData.url ? (

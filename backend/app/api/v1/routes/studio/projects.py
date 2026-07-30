@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -11,18 +13,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
-from app.models.studio import AgentAction, AgentArtifact, AgentCheckpoint, AgentMessage, AgentSession, Chapter, Project
+from app.models.studio import (
+    AgentAction,
+    AgentArtifact,
+    AgentCheckpoint,
+    AgentMessage,
+    AgentSession,
+    Chapter,
+    Project,
+    Shot,
+    ShotDetail,
+    ShotFrameImage,
+)
+from app.models.task import GenerationDeliveryMode, GenerationTask, GenerationTaskStatus
+from app.models.task_links import GenerationTaskLink
 from app.models.types import (
     AgentActionStatus,
     AgentActionType,
     AgentArtifactKind,
     AgentArtifactStatus,
     AgentCheckpointStatus,
+    CameraAngle,
+    CameraMovement,
+    CameraShotType,
     ChapterStatus,
     AgentMessageKind,
     AgentMessageRole,
     AgentSessionStage,
     AgentSessionStatus,
+    ShotFrameType,
+    ShotStatus,
     ProjectStyle,
     ProjectVisualStyle,
 )
@@ -73,8 +93,12 @@ from app.services.studio.agent.turn_decision_llm import LLMAgentTurnDecisionLLM
 from app.services.studio.agent.types import AgentTurnCommand, AgentTurnInput
 from app.services.studio.agent.video_creation_agent import VideoCreationAgent
 from app.services.studio.asset_library import build_project_asset_library
+from app.services.studio.entity_thumbnails import download_url
+from app.services.studio.image_task_runner import create_image_task_and_link
+from app.services.film.generated_video import build_run_args
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 PROJECT_ORDER_FIELDS = {"name", "created_at", "updated_at", "progress"}
 
@@ -439,6 +463,33 @@ async def create_project_canvas_action(
 
     artifact_kind = _artifact_kind_for_canvas_action(body.action)
     stage = _stage_for_canvas_action(body.action)
+    paid_payload: dict = {}
+    paid_call_enqueued = False
+    if body.action == "keyframe_render":
+        paid_payload = await _enqueue_canvas_keyframes(
+            db,
+            project=project,
+            idempotency_key=body.idempotency_key,
+            model=body.model,
+            aspect_ratio=str(body.payload.get("aspect_ratio") or project.default_video_ratio or "16:9"),
+            seed=int((body.payload or {}).get("seed") or project.seed or 0),
+        )
+        paid_call_enqueued = True
+    elif body.action == "video_generate":
+        paid_payload = await _enqueue_or_dryrun_canvas_video(
+            db,
+            project=project,
+            idempotency_key=body.idempotency_key,
+            model=body.model,
+            aspect_ratio=str(body.payload.get("aspect_ratio") or project.default_video_ratio or "16:9"),
+        )
+        paid_call_enqueued = bool(paid_payload.get("paid_call_enqueued"))
+
+    normalized_payload = {**body.payload, **paid_payload}
+    if body.action == "shotlist_text_ready":
+        normalized_payload = {**normalized_payload, "rows": await _build_canvas_shotlist_rows(db, project_id=project_id)}
+    elif body.action == "shotlist_render_ready":
+        normalized_payload = {**normalized_payload, "rows": await _build_canvas_render_rows(db, project_id=project_id)}
     artifact_id = await _append_canvas_action_artifact(
         db,
         project=project,
@@ -450,8 +501,8 @@ async def create_project_canvas_action(
         model=body.model,
         item_count=body.item_count,
         estimated_cny=body.estimated_cny,
-        payload=body.payload,
-        paid_call_enqueued=False,
+        payload=normalized_payload,
+        paid_call_enqueued=paid_call_enqueued,
     )
     await db.commit()
     return created_response(
@@ -461,7 +512,7 @@ async def create_project_canvas_action(
             stage=stage.value,
             status=AgentSessionStatus.waiting_user.value,
             artifact_id=artifact_id,
-            paid_call_enqueued=False,
+            paid_call_enqueued=paid_call_enqueued,
         )
     )
 
@@ -789,6 +840,394 @@ async def _supersede_pending_checkpoints(db: AsyncSession, *, session_id: str) -
     ).scalars().all()
     for row in rows:
         row.status = AgentCheckpointStatus.superseded
+
+
+async def _first_project_chapter(db: AsyncSession, *, project: Project) -> Chapter:
+    """读取或创建画布默认章节，供第6批画布任务挂载 shot/task。"""
+    chapter = (
+        await db.execute(
+            select(Chapter).where(Chapter.project_id == project.id).order_by(Chapter.index.asc()).limit(1)
+        )
+    ).scalars().first()
+    if chapter is not None:
+        return chapter
+    chapter = Chapter(
+        id=f"chapter_{uuid.uuid4().hex}",
+        project_id=project.id,
+        index=1,
+        title="第 1 章",
+        summary="画布自动创建的默认章节。",
+        raw_text=project.description or "",
+        condensed_text=project.description or "",
+        storyboard_count=0,
+        status=ChapterStatus.draft,
+    )
+    db.add(chapter)
+    await db.flush()
+    return chapter
+
+
+async def _ensure_canvas_keyframe_slots(db: AsyncSession, *, project: Project) -> list[tuple[Shot, ShotDetail, ShotFrameImage]]:
+    """确保 5 秒画布存在 5 个 shot 与 key frame image slot。"""
+    chapter = await _first_project_chapter(db, project=project)
+    shots = (
+        await db.execute(select(Shot).where(Shot.chapter_id == chapter.id).order_by(Shot.index.asc()).limit(5))
+    ).scalars().all()
+    existing_indices = {shot.index for shot in shots}
+    for index in range(1, 6):
+        if index in existing_indices:
+            continue
+        shot = Shot(
+            id=f"shot_{uuid.uuid4().hex}",
+            chapter_id=chapter.id,
+            index=index,
+            title=f"格 {index}",
+            thumbnail="",
+            status=ShotStatus.ready,
+            skip_extraction=True,
+            script_excerpt=f"画布关键帧第 {index} 格",
+        )
+        db.add(shot)
+        shots.append(shot)
+    await db.flush()
+    shots = sorted(shots, key=lambda item: item.index)[:5]
+
+    result: list[tuple[Shot, ShotDetail, ShotFrameImage]] = []
+    for shot in shots:
+        detail = await db.get(ShotDetail, shot.id)
+        if detail is None:
+            detail = ShotDetail(
+                id=shot.id,
+                camera_shot=CameraShotType.ms,
+                angle=CameraAngle.eye_level,
+                movement=CameraMovement.static,
+                duration=1,
+                override_video_ratio=None,
+                mood_tags=[],
+                atmosphere="",
+                follow_atmosphere=True,
+                has_bgm=False,
+                description=shot.script_excerpt or shot.title,
+                action_beats=[shot.script_excerpt or shot.title],
+                first_frame_prompt="",
+                last_frame_prompt="",
+                key_frame_prompt=shot.script_excerpt or shot.title,
+            )
+            db.add(detail)
+            await db.flush()
+        frame = (
+            await db.execute(
+                select(ShotFrameImage)
+                .where(ShotFrameImage.shot_detail_id == shot.id, ShotFrameImage.frame_type == ShotFrameType.key)
+                .limit(1)
+            )
+        ).scalars().first()
+        if frame is None:
+            frame = ShotFrameImage(shot_detail_id=shot.id, frame_type=ShotFrameType.key, file_id=None, format="png")
+            db.add(frame)
+            await db.flush()
+        result.append((shot, detail, frame))
+    return result
+
+
+async def _paid_image_call_count(db: AsyncSession, *, project_id: str) -> int:
+    """按 keyframe artifact 统计画布已确认的真实生图调用数，供预算硬闸使用。"""
+    rows = (
+        await db.execute(
+            select(AgentArtifact).where(
+                AgentArtifact.project_id == project_id,
+                AgentArtifact.kind == AgentArtifactKind.keyframe,
+            )
+        )
+    ).scalars().all()
+    total = 0
+    for row in rows:
+        frames = (row.content_json or {}).get("frames")
+        if isinstance(frames, list):
+            total += len(frames)
+    return total
+
+
+async def _enqueue_canvas_keyframes(
+    db: AsyncSession,
+    *,
+    project: Project,
+    idempotency_key: str,
+    model: str,
+    aspect_ratio: str,
+    seed: int,
+) -> dict:
+    """确认成本后创建 5 个关键帧图片任务；未确认路径不会调用这里。"""
+    cap_text = os.getenv("NUWA_PAID_IMAGE_CALL_CAP", "").strip()
+    if cap_text:
+        try:
+            cap = int(cap_text)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail="NUWA_PAID_IMAGE_CALL_CAP must be an integer") from exc
+        current = await _paid_image_call_count(db, project_id=project.id)
+        if current + 5 > cap:
+            raise HTTPException(status_code=402, detail=f"paid image call cap exceeded: current={current}, requested=5, cap={cap}")
+
+    slots = await _ensure_canvas_keyframe_slots(db, project=project)
+    frames: list[dict] = []
+    for panel_index, (shot, detail, frame) in enumerate(slots, start=1):
+        prompt = (detail.key_frame_prompt or detail.description or shot.script_excerpt or shot.title).strip()
+        task_id = await create_image_task_and_link(
+            db=db,
+            model_id=None,
+            relation_type="shot_frame_image",
+            relation_entity_id=str(frame.id),
+            prompt=prompt,
+            target_ratio=aspect_ratio,
+            resolution_profile="standard",
+            purpose="video_reference",
+            render_context={
+                "agent_workflow": "phase6_canvas_keyframes",
+                "canvas_action": "keyframe_render",
+                "idempotency_key": idempotency_key,
+                "panel_index": panel_index,
+                "shot_id": shot.id,
+                "seed": seed,
+                "model_label": model,
+            },
+            enqueue=True,
+        )
+        frames.append({
+            "panel_index": panel_index,
+            "shot_id": shot.id,
+            "shot_frame_image_id": frame.id,
+            "task_id": task_id,
+            "status": "loading",
+            "seed": seed,
+            "prompt": prompt,
+        })
+    logger.info(
+        "Nuwa canvas keyframe tasks enqueued: project_id=%s count=%s model=%s ratio=%s seed=%s task_ids=%s",
+        project.id,
+        len(frames),
+        model,
+        aspect_ratio,
+        seed,
+        [item["task_id"] for item in frames],
+    )
+    return {
+        "aspect_ratio": aspect_ratio,
+        "seed": seed,
+        "frames": frames,
+        "paid_image_call_count": len(frames),
+    }
+
+
+async def _latest_artifact(db: AsyncSession, *, project_id: str, kind: AgentArtifactKind) -> AgentArtifact | None:
+    """读取项目内某类 artifact 的最新版本。"""
+    return (
+        await db.execute(
+            select(AgentArtifact)
+            .where(AgentArtifact.project_id == project_id, AgentArtifact.kind == kind)
+            .order_by(AgentArtifact.version.desc())
+            .limit(1)
+        )
+    ).scalars().first()
+
+
+def _storyboard_panels_from_content(content: dict) -> list[dict]:
+    """把 storyboard artifact 归一化为前 5 个格子的结构数据。"""
+    pages = content.get("pages")
+    if isinstance(pages, list) and pages:
+        page = pages[-1] if isinstance(pages[-1], dict) else {}
+        panels = page.get("panels")
+        if isinstance(panels, list):
+            return [item for item in panels if isinstance(item, dict) and not item.get("is_blank")][:5]
+    for key in ("shots", "shot_divisions", "items", "storyboard"):
+        rows = content.get(key)
+        if isinstance(rows, list):
+            return [item for item in rows if isinstance(item, dict)][:5]
+    return []
+
+
+def _motion_design_for_row(row: dict) -> dict:
+    """把视频提示词公式需要的 6 项运动设计落成结构字段。"""
+    summary = str(row.get("one_sentence_summary") or row.get("visible_summary") or row.get("summary") or row.get("title") or "")
+    beats = row.get("action_beats") if isinstance(row.get("action_beats"), list) else []
+    route = " → ".join(str(item) for item in beats) or summary or "按当前格动作推进"
+    subject = row.get("subject")
+    subject_text = str(subject.get("value") if isinstance(subject, dict) else subject or "主体")
+    return {
+        "follow_subject": subject_text,
+        "route": route,
+        "spatial_explanation": str(row.get("composition_anchor") or row.get("camera") or "保持项目比例内的清晰空间关系"),
+        "relationship_change": str(row.get("relationship_change") or "主体关系按动作节拍变化"),
+        "pause_point": str(row.get("pause_point") or "动作完成处短暂停顿"),
+        "ending_information": str(row.get("ending_information") or summary or "释放本格结果信息"),
+    }
+
+
+async def _build_canvas_shotlist_rows(db: AsyncSession, *, project_id: str) -> list[dict]:
+    """从 storyboard artifact 构造免费预审分镜表行；六要素只进结构数据。"""
+    artifact = await _latest_artifact(db, project_id=project_id, kind=AgentArtifactKind.storyboard)
+    panels = _storyboard_panels_from_content(artifact.content_json or {}) if artifact is not None else []
+    if not panels:
+        panels = [{"index": index, "one_sentence_summary": f"格 {index}"} for index in range(1, 6)]
+    rows: list[dict] = []
+    for index, panel in enumerate(panels[:5], start=1):
+        six = panel.get("six_elements_for_video_model") or panel.get("six_elements")
+        beats = panel.get("action_beats") if isinstance(panel.get("action_beats"), list) else []
+        rows.append({
+            "panel_index": int(panel.get("index") or panel.get("shot_index") or index),
+            "one_sentence_summary": str(panel.get("one_sentence_summary") or panel.get("visible_summary") or panel.get("summary") or panel.get("title") or f"格 {index}"),
+            "six_elements_for_video_model": six if isinstance(six, dict) else {},
+            "emotion": str(panel.get("emotion") or "待审"),
+            "action_beats": [str(item) for item in beats],
+            "motion_design": _motion_design_for_row(panel),
+        })
+    return rows
+
+
+async def _file_url_for_task(db: AsyncSession, *, task_id: str) -> str | None:
+    """读取任务关联文件的下载 URL。"""
+    link = (
+        await db.execute(
+            select(GenerationTaskLink)
+            .where(GenerationTaskLink.task_id == task_id, GenerationTaskLink.file_id.is_not(None))
+            .limit(1)
+        )
+    ).scalars().first()
+    return download_url(link.file_id) if link is not None and link.file_id else None
+
+
+async def _build_canvas_render_rows(db: AsyncSession, *, project_id: str) -> list[dict]:
+    """用同一批 keyframe task/file 构造渲染版分镜表，禁止二次生图。"""
+    text_rows = await _build_canvas_shotlist_rows(db, project_id=project_id)
+    keyframe = await _latest_artifact(db, project_id=project_id, kind=AgentArtifactKind.keyframe)
+    frame_by_panel: dict[int, dict] = {}
+    for frame in (keyframe.content_json or {}).get("frames", []) if keyframe is not None else []:
+        if isinstance(frame, dict):
+            frame_by_panel[int(frame.get("panel_index") or 0)] = frame
+    rows: list[dict] = []
+    for row in text_rows[:5]:
+        panel_index = int(row.get("panel_index") or len(rows) + 1)
+        frame = frame_by_panel.get(panel_index, {})
+        frame_url = await _file_url_for_task(db, task_id=str(frame.get("task_id") or "")) if frame.get("task_id") else None
+        six = row.get("six_elements_for_video_model") if isinstance(row.get("six_elements_for_video_model"), dict) else {}
+        rows.append({
+            "panel_index": panel_index,
+            "frame_url": frame_url,
+            "task_id": frame.get("task_id"),
+            "movement": str(six.get("movement") or six.get("camera_movement") or "待审"),
+            "camera_shot": str(six.get("camera_shot") or six.get("shot_type") or "待审"),
+            "emotion": row.get("emotion") or "待审",
+            "action_beats": row.get("action_beats") if isinstance(row.get("action_beats"), list) else [],
+            "atmosphere": str(six.get("lighting") or six.get("atmosphere") or "待审"),
+        })
+    return rows
+
+
+async def _enqueue_or_dryrun_canvas_video(
+    db: AsyncSession,
+    *,
+    project: Project,
+    idempotency_key: str,
+    model: str,
+    aspect_ratio: str,
+) -> dict:
+    """确认成本后创建视频任务；默认 dry-run 只写日志和模拟成功任务。"""
+    slots = await _ensure_canvas_keyframe_slots(db, project=project)
+    shot = slots[0][0]
+    render_rows = await _build_canvas_render_rows(db, project_id=project.id)
+    first_row = render_rows[0] if render_rows else {}
+    prompt = "；".join(
+        [
+            str(first_row.get("emotion") or ""),
+            " → ".join(str(item) for item in first_row.get("action_beats") or []),
+            str(first_row.get("movement") or ""),
+            str(first_row.get("camera_shot") or ""),
+        ]
+    ).strip("；") or "按渲染版分镜表生成视频"
+    images: list[str] = []
+    keyframe_artifact = await _latest_artifact(db, project_id=project.id, kind=AgentArtifactKind.keyframe)
+    keyframe_frames = (keyframe_artifact.content_json or {}).get("frames", []) if keyframe_artifact is not None else []
+    for frame in keyframe_frames:
+        if isinstance(frame, dict) and frame.get("task_id"):
+            url = await _file_url_for_task(db, task_id=str(frame.get("task_id")))
+            if url:
+                images.append(url)
+
+    request_payload = {
+        "model": model or "Seedance 2.0",
+        "prompt": prompt,
+        "keyframe_image_urls": images[:5],
+        "ratio": aspect_ratio,
+        "resolution": "720p",
+        "duration": 5,
+        "shot_index": 1,
+        "shot_id": shot.id,
+    }
+    dryrun = os.getenv("NUWA_VIDEO_DRYRUN", "1").strip() != "0"
+    if dryrun:
+        task_id = f"task_{uuid.uuid4().hex}"
+        task = GenerationTask(
+            id=task_id,
+            mode=GenerationDeliveryMode.async_polling,
+            task_kind="video_generation",
+            status=GenerationTaskStatus.succeeded,
+            progress=100,
+            payload={"dryrun": True, "run_args": request_payload},
+            result={
+                "dryrun": True,
+                "url": "/nuwa-video-dryrun.mp4",
+                "provider": "volcengine",
+                "status": "succeeded",
+                "usage": {"model": model or "Seedance 2.0", "estimated_cny": 0},
+            },
+            error="",
+        )
+        db.add(task)
+        db.add(GenerationTaskLink(task_id=task_id, resource_type="video", relation_type="video", relation_entity_id=shot.id))
+        await db.flush()
+        logger.info("NUWA_VIDEO_DRYRUN request=%s", json.dumps(request_payload, ensure_ascii=False))
+        return {
+            "paid_call_enqueued": False,
+            "dryrun": True,
+            "videos": [{
+                "shot_index": 1,
+                "shot_id": shot.id,
+                "task_id": task_id,
+                "url": "/nuwa-video-dryrun.mp4",
+                "duration": 5,
+                "resolution": "720P",
+                "aspect_ratio": aspect_ratio,
+                "prompt_used": prompt,
+            }],
+            "dryrun_request": request_payload,
+        }
+
+    run_args = await build_run_args(
+        db,
+        shot_id=shot.id,
+        reference_mode="text_only",
+        prompt=prompt,
+        images=[],
+        ratio=aspect_ratio,
+    )
+    task_id = f"task_{uuid.uuid4().hex}"
+    db.add(
+        GenerationTask(
+            id=task_id,
+            mode=GenerationDeliveryMode.async_polling,
+            task_kind="video_generation",
+            status=GenerationTaskStatus.pending,
+            progress=0,
+            payload={"run_args": run_args},
+            result=None,
+            error="",
+        )
+    )
+    db.add(GenerationTaskLink(task_id=task_id, resource_type="video", relation_type="video", relation_entity_id=shot.id))
+    await db.flush()
+    from app.tasks.execute_task import enqueue_task_execution
+
+    enqueue_task_execution(task_id)
+    return {"paid_call_enqueued": True, "dryrun": False, "videos": [{"shot_index": 1, "shot_id": shot.id, "task_id": task_id}]}
 
 
 def _artifact_kind_for_canvas_action(action: str) -> AgentArtifactKind:

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 
 from app.config import settings
 
@@ -69,6 +70,29 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if engine.url.get_backend_name().startswith("sqlite"):
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS project_canvas_states (
+                    project_id VARCHAR(64) NOT NULL PRIMARY KEY,
+                    nodes JSON NOT NULL,
+                    edges JSON NOT NULL,
+                    viewport JSON NOT NULL,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """))
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS chapter_canvas_states (
+                    chapter_id VARCHAR(64) NOT NULL PRIMARY KEY,
+                    project_id VARCHAR(64) NOT NULL,
+                    nodes JSON NOT NULL,
+                    edges JSON NOT NULL,
+                    viewport JSON NOT NULL,
+                    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
+                    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """))
 
 
 async def close_db() -> None:

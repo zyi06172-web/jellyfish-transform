@@ -38,7 +38,17 @@ function KeyframeNodeBase({ id, data, selected }: NodeProps) {
               <div className="nuwa-frame-preview" style={{ aspectRatio: ratio }}>
                 {frame.url ? <img src={frame.url} alt={`关键帧 ${frame.panel_index}`} /> : <NodeEmptyState label={frame.status === 'loading' ? '生成中' : '等待'} />}
               </div>
-              <Button size="small" icon={<ReloadOutlined />}>重渲</Button>
+              <Button
+                size="small"
+                icon={<ReloadOutlined />}
+                onClick={() => nodeData.__ops?.derive(id, {
+                  status: 'loading',
+                  title: `关键帧 ${frame.panel_index} · 单张重渲`,
+                  frames: [{ ...frame, status: 'loading', url: undefined }],
+                } as Partial<KeyframeNodeData>)}
+              >
+                重渲
+              </Button>
             </div>
           ))}
         </div>

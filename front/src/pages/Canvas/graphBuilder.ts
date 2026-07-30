@@ -7,7 +7,9 @@ import type {
 import {
   DEFAULT_CANVAS_RATIO,
   type CanvasNodeType,
+  type CanvasNodeStatus,
   type NuwaCanvasNodeData,
+  type ShotlistTextRow,
 } from './types'
 
 type PositionFor = (type: CanvasNodeType, index: number) => { x: number; y: number }
@@ -89,6 +91,49 @@ function normalizedStoryboard(snapshot: AgentWorkspaceSnapshotRead | null) {
   }
 }
 
+function arrayFromArtifact(snapshot: AgentWorkspaceSnapshotRead | null, kind: string, key: string) {
+  const artifact = latestArtifact(snapshot, kind)
+  const value = artifact?.content_json?.[key]
+  return Array.isArray(value) ? value as Record<string, unknown>[] : []
+}
+
+function keyframeFrames(snapshot: AgentWorkspaceSnapshotRead | null) {
+  return arrayFromArtifact(snapshot, 'keyframe', 'frames').map((frame, index) => ({
+    panel_index: Number(frame.panel_index || index + 1),
+    url: typeof frame.url === 'string' ? frame.url : undefined,
+    seed: typeof frame.seed === 'number' ? frame.seed : undefined,
+    status: ((frame.status === 'ready' || frame.status === 'error' || frame.status === 'loading') ? frame.status : 'loading') as CanvasNodeStatus,
+    task_id: typeof frame.task_id === 'string' ? frame.task_id : undefined,
+  }))
+}
+
+function shotlistTextRows(snapshot: AgentWorkspaceSnapshotRead | null): ShotlistTextRow[] {
+  return arrayFromArtifact(snapshot, 'shotlist_text', 'rows').map((row, index) => ({
+    panel_index: Number(row.panel_index || index + 1),
+    one_sentence_summary: String(row.one_sentence_summary || `格 ${index + 1}`),
+    six_elements_for_video_model: asObject(row.six_elements_for_video_model),
+    emotion: typeof row.emotion === 'string' ? row.emotion : undefined,
+    action_beats: Array.isArray(row.action_beats) ? row.action_beats.map(String) : [],
+    motion_design: asObject(row.motion_design),
+  }))
+}
+
+function shotlistRenderRows(snapshot: AgentWorkspaceSnapshotRead | null) {
+  return arrayFromArtifact(snapshot, 'shotlist_render', 'rows').map((row, index) => ({
+    panel_index: Number(row.panel_index || index + 1),
+    frame_url: typeof row.frame_url === 'string' ? row.frame_url : undefined,
+    movement: typeof row.movement === 'string' ? row.movement : undefined,
+    camera_shot: typeof row.camera_shot === 'string' ? row.camera_shot : undefined,
+    emotion: typeof row.emotion === 'string' ? row.emotion : undefined,
+    action_beats: Array.isArray(row.action_beats) ? row.action_beats.map(String) : [],
+    atmosphere: typeof row.atmosphere === 'string' ? row.atmosphere : undefined,
+  }))
+}
+
+function videoPayload(snapshot: AgentWorkspaceSnapshotRead | null) {
+  return arrayFromArtifact(snapshot, 'video', 'videos')[0]
+}
+
 function isWearableProp(asset: AssetLibraryItemRead) {
   const bible = asObject(asset.bible)
   const text = `${asset.name} ${asset.description || ''}`.toLowerCase()
@@ -162,8 +207,16 @@ export function buildInitialGraph({
   const ratio = aspectRatio || DEFAULT_CANVAS_RATIO
   const storyArtifact = latestArtifact(snapshot, 'story_summary')
   const storyboardArtifact = latestArtifact(snapshot, 'storyboard')
+  const shotlistTextArtifact = latestArtifact(snapshot, 'shotlist_text')
+  const keyframeArtifact = latestArtifact(snapshot, 'keyframe')
+  const shotlistRenderArtifact = latestArtifact(snapshot, 'shotlist_render')
+  const videoArtifact = latestArtifact(snapshot, 'video')
   const storyContent = asObject(storyArtifact?.content_json)
   const storyboardContent = normalizedStoryboard(snapshot)
+  const frames = keyframeFrames(snapshot)
+  const textRows = shotlistTextRows(snapshot)
+  const renderRows = shotlistRenderRows(snapshot)
+  const video = videoPayload(snapshot)
   const characters = library?.characters ?? []
   const scenes = library?.scenes ?? []
   const props = library?.props ?? []
@@ -250,10 +303,39 @@ export function buildInitialGraph({
       data: { ...base, status: storyboardContent ? 'ready' : 'empty', content_json: storyboardContent },
     },
     { id: 'shot_group', type: 'shot_group', position: positionFor('shot_group', 0), data: { ...base, shots: [] } },
-    { id: 'shotlist_text', type: 'shotlist_text', position: positionFor('shotlist_text', 1), data: { ...base, rows: [] } },
-    { id: 'keyframe', type: 'keyframe', position: positionFor('keyframe', 0), data: { ...base, seed: projectSeed || 0, frames: [] } },
-    { id: 'shotlist_render', type: 'shotlist_render', position: positionFor('shotlist_render', 0), data: { ...base, rows: [] } },
-    { id: 'video', type: 'video', position: positionFor('video', 0), data: { ...base, aspect_ratio: ratio } },
+    {
+      id: 'shotlist_text',
+      type: 'shotlist_text',
+      position: positionFor('shotlist_text', 1),
+      data: { ...base, status: shotlistTextArtifact ? 'ready' : 'empty', rows: textRows },
+    },
+    {
+      id: 'keyframe',
+      type: 'keyframe',
+      position: positionFor('keyframe', 0),
+      data: { ...base, status: keyframeArtifact ? (frames.some((frame) => frame.status === 'loading') ? 'loading' : 'ready') : 'empty', seed: Number(keyframeArtifact?.content_json?.seed || projectSeed || 0), frames },
+    },
+    {
+      id: 'shotlist_render',
+      type: 'shotlist_render',
+      position: positionFor('shotlist_render', 0),
+      data: { ...base, status: shotlistRenderArtifact ? 'ready' : 'empty', rows: renderRows },
+    },
+    {
+      id: 'video',
+      type: 'video',
+      position: positionFor('video', 0),
+      data: {
+        ...base,
+        status: videoArtifact ? 'ready' : 'empty',
+        aspect_ratio: String(video?.aspect_ratio || ratio),
+        url: typeof video?.url === 'string' ? video.url : undefined,
+        duration: typeof video?.duration === 'number' ? video.duration : undefined,
+        resolution: typeof video?.resolution === 'string' ? video.resolution : undefined,
+        shot_index: typeof video?.shot_index === 'number' ? video.shot_index : undefined,
+        prompt_used: typeof video?.prompt_used === 'string' ? video.prompt_used : undefined,
+      },
+    },
   ]
 
   const edges: Edge[] = [
@@ -271,4 +353,31 @@ export function buildInitialGraph({
     { id: 'shotlist-render-video', source: 'shotlist_render', target: 'video', animated: true },
   ]
   return { nodes, edges }
+}
+
+export function previewRowsFromNodes(nodes: Node<NuwaCanvasNodeData>[]): ShotlistTextRow[] {
+  const readyRows = nodes.find((node) => node.type === 'shotlist_text')?.data
+  if (readyRows && 'rows' in readyRows && Array.isArray(readyRows.rows) && readyRows.rows.length) {
+    return readyRows.rows as ShotlistTextRow[]
+  }
+  const storyboard = nodes.find((node) => node.type === 'storyboard')?.data
+  const panels = storyboard && 'content_json' in storyboard ? storyboard.content_json?.pages?.[0]?.panels ?? [] : []
+  return panels
+    .filter((panel) => !panel.is_blank)
+    .filter((_panel, index) => index < 5)
+    .map((panel, index) => ({
+      panel_index: panel.index || index + 1,
+      one_sentence_summary: panel.one_sentence_summary || `格 ${index + 1}`,
+      six_elements_for_video_model: panel.six_elements_for_video_model ?? {},
+      emotion: '待审',
+      action_beats: [],
+      motion_design: {
+        follow_subject: '主体',
+        route: panel.one_sentence_summary || '按当前格动作推进',
+        spatial_explanation: '保持项目比例内的清晰空间关系',
+        relationship_change: '主体关系按动作节拍变化',
+        pause_point: '动作完成处短暂停顿',
+        ending_information: panel.one_sentence_summary || '释放本格结果信息',
+      },
+    }))
 }

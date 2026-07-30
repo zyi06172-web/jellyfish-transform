@@ -18,8 +18,7 @@ import {
   type NodeChange,
   type Viewport,
 } from '@xyflow/react'
-import { Alert, Button, Modal, Spin, Tag, message } from 'antd'
-import { ApiOutlined, DownloadOutlined, FullscreenOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Alert, Modal, Spin, message } from 'antd'
 import {
   StudioChaptersService,
   StudioProjectsService,
@@ -33,8 +32,10 @@ import { DEFAULT_CANVAS_RATIO, type NuwaCanvasNodeData } from './types'
 import { useAutoLayout } from './hooks/useAutoLayout'
 import { useGenerationCost } from './hooks/useGenerationCost'
 import { useNodeOperations } from './hooks/useNodeOperations'
-import { buildInitialGraph, mergeBackendGraph, persistableNodes, savedLooksLikeBatch6 } from './graphBuilder'
+import { buildInitialGraph, mergeBackendGraph, persistableNodes, previewRowsFromNodes, savedLooksLikeBatch6 } from './graphBuilder'
 import { useCanvasModelStatus } from './hooks/useCanvasModelStatus'
+import { ShotlistPreviewModal } from './ShotlistPreviewModal'
+import { CanvasToolbar } from './CanvasToolbar'
 
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 0.62 }
 
@@ -95,6 +96,7 @@ export function CanvasBoard({
   const [edges, setEdges] = useState<Edge[]>([])
   const [hydrated, setHydrated] = useState(false)
   const [agentCollapsed, setAgentCollapsed] = useState(false)
+  const [shotlistPreviewOpen, setShotlistPreviewOpen] = useState(false)
   const modelStatus = useCanvasModelStatus()
   const canvasId = chapterId ? `chapter:${chapterId}` : `project:${projectId}`
   const aspectRatio = project?.default_video_ratio || DEFAULT_CANVAS_RATIO
@@ -299,6 +301,8 @@ export function CanvasBoard({
     await onRefresh()
   }, [aspectRatio, nodes, onRefresh, operations, projectId, snapshot?.session_id])
 
+  const previewRows = useMemo(() => previewRowsFromNodes(nodes), [nodes])
+
   const markRenderedShotlist = useCallback(async () => {
     if (!snapshot?.session_id) return
     await StudioProjectsService.createProjectCanvasActionApiV1StudioProjectsProjectIdCanvasActionsPost({
@@ -333,7 +337,6 @@ export function CanvasBoard({
         nodeTypes={nodeTypes}
         minZoom={0.18}
         maxZoom={2}
-        onlyRenderVisibleElements
         selectionOnDrag
         panOnScroll
         onNodesChange={onNodesChange}
@@ -345,35 +348,16 @@ export function CanvasBoard({
         <MiniMap className="!bg-black/80" maskColor="rgba(0,0,0,.58)" nodeColor={() => '#ffffff'} />
         <Controls className="nuwa-flow-controls" />
       </ReactFlow>
-      <div className="pointer-events-none absolute left-6 top-5 z-10 flex items-center gap-2">
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" icon={<FullscreenOutlined />} onClick={() => flow.fitView({ padding: 0.18 })}>
-          全览
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" icon={<ReloadOutlined />} onClick={onRefresh}>
-          刷新数据
-        </Button>
-        <Tag className="pointer-events-auto !m-0 !border-white/12 !bg-black !px-3 !py-1 !text-white/72">
-          模型 {modelStatus.text && modelStatus.image && modelStatus.video ? '已绑定' : '待配置'} · {modelStatus.labels.join(' / ')}
-        </Tag>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" icon={<ApiOutlined />}>
-          资产库
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" icon={<DownloadOutlined />}>
-          打包下载视频
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" onClick={() => void markFreeReview()}>
-          文字预审通过
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" onClick={confirmKeyframeRender}>
-          确认渲染关键帧
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" onClick={() => void markRenderedShotlist()}>
-          生成渲染分镜表
-        </Button>
-        <Button className="pointer-events-auto !border-white/12 !bg-black !text-white" onClick={confirmVideoGeneration}>
-          确认出视频
-        </Button>
-      </div>
+      <CanvasToolbar
+        modelReady={modelStatus.text && modelStatus.image && modelStatus.video}
+        modelLabels={modelStatus.labels}
+        onFitView={() => flow.fitView({ padding: 0.18 })}
+        onRefresh={onRefresh}
+        onPreviewShotlist={() => setShotlistPreviewOpen(true)}
+        onConfirmKeyframes={confirmKeyframeRender}
+        onBuildRenderedShotlist={() => void markRenderedShotlist()}
+        onConfirmVideo={confirmVideoGeneration}
+      />
       <div className={`nuwa-agent-float ${agentCollapsed ? 'nuwa-agent-float-collapsed' : ''}`}>
         <AgentDock
           messages={snapshot?.messages ?? []}
@@ -390,6 +374,16 @@ export function CanvasBoard({
           onText={onText}
         />
       </div>
+      <ShotlistPreviewModal
+        open={shotlistPreviewOpen}
+        rows={previewRows}
+        onCancel={() => setShotlistPreviewOpen(false)}
+        onConfirm={async () => {
+          setShotlistPreviewOpen(false)
+          await markFreeReview()
+          confirmKeyframeRender()
+        }}
+      />
     </div>
   )
 }
