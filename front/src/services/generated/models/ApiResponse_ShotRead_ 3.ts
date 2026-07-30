@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { ProjectCanvasActionRead } from './ProjectCanvasActionRead';
-export type ApiResponse_ProjectCanvasActionRead_ = {
+import type { ShotRead } from './ShotRead';
+export type ApiResponse_ShotRead_ = {
     /**
      * 与 HTTP 状态码一致
      */
@@ -15,7 +15,7 @@ export type ApiResponse_ProjectCanvasActionRead_ = {
     /**
      * 实际数据
      */
-    data?: (ProjectCanvasActionRead | null);
+    data?: (ShotRead | null);
     /**
      * 附加元信息
      */

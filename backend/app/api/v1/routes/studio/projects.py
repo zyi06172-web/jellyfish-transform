@@ -64,7 +64,6 @@ from app.services.studio.agent.home_prompt_analysis import (
     create_home_project_from_prompt,
     run_home_prompt_analysis_task,
 )
-from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
 from app.services.llm import build_default_text_llm
 from app.services.studio.agent.db_repository import DbAgentRepository
 from app.services.studio.agent.element_regeneration import regenerate_element_image
@@ -344,6 +343,8 @@ async def handle_project_agent_turn(
     )
     if body.input.type == "choice" and result.stage == AgentSessionStage.storyboard:
         await db.commit()
+        from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
+
         enqueue_agent_auto_elements_chain(
             project_id=project_id,
             session_id=body.session_id,
@@ -704,9 +705,9 @@ def _stage_for_canvas_action(action: str) -> AgentSessionStage:
         "script_parsed": AgentSessionStage.spec_review,
         "assets_ready": AgentSessionStage.elements_review,
         "storyboard_ready": AgentSessionStage.storyboard,
-        "shotlist_text_ready": AgentSessionStage.shotlist_text,
-        "keyframe_render": AgentSessionStage.keyframe,
-        "shotlist_render_ready": AgentSessionStage.shotlist_render,
+        "shotlist_text_ready": AgentSessionStage.storyboard,
+        "keyframe_render": AgentSessionStage.shot_video,
+        "shotlist_render_ready": AgentSessionStage.shot_video,
         "video_generate": AgentSessionStage.shot_video,
     }
     return mapping[action]

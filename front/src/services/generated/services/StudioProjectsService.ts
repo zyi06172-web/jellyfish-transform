@@ -14,10 +14,10 @@ import type { ApiResponse_ProjectCanvasStateRead_ } from '../models/ApiResponse_
 import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
 import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
 import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
-import type { ProjectCreate } from '../models/ProjectCreate';
 import type { ProjectBlankCanvasRequest } from '../models/ProjectBlankCanvasRequest';
 import type { ProjectCanvasActionRequest } from '../models/ProjectCanvasActionRequest';
 import type { ProjectCanvasStateUpdate } from '../models/ProjectCanvasStateUpdate';
+import type { ProjectCreate } from '../models/ProjectCreate';
 import type { ProjectFromPromptRequest } from '../models/ProjectFromPromptRequest';
 import type { ProjectUpdate } from '../models/ProjectUpdate';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -99,6 +99,7 @@ export class StudioProjectsService {
     }
     /**
      * 创建空白女娲画布并初始化 Agent 会话
+     * 创建空白画布，让用户从画布内 AgentDock 贴剧本开始。
      * @returns ApiResponse_ProjectBlankCanvasRead_ Successful Response
      * @throws ApiError
      */
@@ -206,6 +207,7 @@ export class StudioProjectsService {
     }
     /**
      * 记录第6批画布节点动作并推进 Agent 阶段
+     * 把画布动作追加为 Agent 消息和 artifact；付费阶段必须带显式确认。
      * @returns ApiResponse_ProjectCanvasActionRead_ Successful Response
      * @throws ApiError
      */
@@ -231,6 +233,7 @@ export class StudioProjectsService {
     }
     /**
      * 获取项目画布状态
+     * 读取 React Flow 画布状态；没有保存记录时返回空画布默认值。
      * @returns ApiResponse_ProjectCanvasStateRead_ Successful Response
      * @throws ApiError
      */
@@ -252,6 +255,7 @@ export class StudioProjectsService {
     }
     /**
      * 保存项目画布状态
+     * 保存节点、连线与视口，让画布刷新后可恢复。
      * @returns ApiResponse_ProjectCanvasStateRead_ Successful Response
      * @throws ApiError
      */

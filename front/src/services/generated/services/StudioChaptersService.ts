@@ -105,52 +105,6 @@ export class StudioChaptersService {
         });
     }
     /**
-     * 获取章节画布状态
-     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
-     * @throws ApiError
-     */
-    public static getChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStateGet({
-        chapterId,
-    }: {
-        chapterId: string,
-    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
-            path: {
-                'chapter_id': chapterId,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
-     * 保存章节画布状态
-     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
-     * @throws ApiError
-     */
-    public static updateChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStatePatch({
-        chapterId,
-        requestBody,
-    }: {
-        chapterId: string,
-        requestBody: ProjectCanvasStateUpdate,
-    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
-            path: {
-                'chapter_id': chapterId,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
      * 更新章节
      * @returns ApiResponse_ChapterRead_ Successful Response
      * @throws ApiError
@@ -191,6 +145,54 @@ export class StudioChaptersService {
             path: {
                 'chapter_id': chapterId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取章节画布状态
+     * 读取章节级 React Flow 画布状态；没有保存记录时返回空画布默认值。
+     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStateGet({
+        chapterId,
+    }: {
+        chapterId: string,
+    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
+            path: {
+                'chapter_id': chapterId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 保存章节画布状态
+     * 按章节保存节点、连线与视口，保证一集一个画布刷新后可恢复。
+     * @returns ApiResponse_ChapterCanvasStateRead_ Successful Response
+     * @throws ApiError
+     */
+    public static updateChapterCanvasStateApiV1StudioChaptersChapterIdCanvasStatePatch({
+        chapterId,
+        requestBody,
+    }: {
+        chapterId: string,
+        requestBody: ProjectCanvasStateUpdate,
+    }): CancelablePromise<ApiResponse_ChapterCanvasStateRead_> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/studio/chapters/{chapter_id}/canvas-state',
+            path: {
+                'chapter_id': chapterId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

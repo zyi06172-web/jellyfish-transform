@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { ProjectCanvasActionRead } from './ProjectCanvasActionRead';
-export type ApiResponse_ProjectCanvasActionRead_ = {
+import type { PaginatedData_ProjectRead_ } from './PaginatedData_ProjectRead_';
+export type ApiResponse_PaginatedData_ProjectRead__ = {
     /**
      * 与 HTTP 状态码一致
      */
@@ -15,7 +15,7 @@ export type ApiResponse_ProjectCanvasActionRead_ = {
     /**
      * 实际数据
      */
-    data?: (ProjectCanvasActionRead | null);
+    data?: (PaginatedData_ProjectRead_ | null);
     /**
      * 附加元信息
      */

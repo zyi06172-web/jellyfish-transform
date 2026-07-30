@@ -10,7 +10,6 @@ from app.models.task_links import GenerationTaskLink
 from app.schemas.studio.shots import ShotVideoPromptPackRead
 from app.services.film.generated_video import build_run_args, preview_prompt_and_images
 from app.services.studio.shot_status import mark_shot_generating
-from app.tasks.execute_task import enqueue_task_execution
 from app.schemas.common import ApiResponse, created_response, success_response
 
 from .common import TaskCreated, _CreateOnlyTask
@@ -88,6 +87,8 @@ async def create_video_generation_task(
 
     # 确保任务记录已提交，避免后台 runner 新 session 查询不到任务行而无法更新状态。
     await db.commit()
+
+    from app.tasks.execute_task import enqueue_task_execution
 
     enqueue_task_execution(task_record.id)
     return created_response(TaskCreated(task_id=task_record.id))

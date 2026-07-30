@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { ProjectCanvasActionRead } from './ProjectCanvasActionRead';
-export type ApiResponse_ProjectCanvasActionRead_ = {
+import type { PropInfoAnalysisResult } from './PropInfoAnalysisResult';
+export type ApiResponse_PropInfoAnalysisResult_ = {
     /**
      * 与 HTTP 状态码一致
      */
@@ -15,7 +15,7 @@ export type ApiResponse_ProjectCanvasActionRead_ = {
     /**
      * 实际数据
      */
-    data?: (ProjectCanvasActionRead | null);
+    data?: (PropInfoAnalysisResult | null);
     /**
      * 附加元信息
      */

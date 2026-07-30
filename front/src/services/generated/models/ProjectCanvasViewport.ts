@@ -9,11 +9,11 @@ export type ProjectCanvasViewport = {
     /**
      * 视口 X 偏移
      */
-    x?: number;
+    'x'?: number;
     /**
      * 视口 Y 偏移
      */
-    y?: number;
+    'y'?: number;
     /**
      * 缩放比例
      */

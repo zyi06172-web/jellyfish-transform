@@ -12,7 +12,6 @@ from app.services.film.shot_frame_prompt_tasks import (
     relation_type_for_frame,
 )
 from app.services.studio.shot_status import mark_shot_generating
-from app.tasks.execute_task import enqueue_task_execution
 
 from .common import (
     ShotFramePromptRequest,
@@ -59,6 +58,8 @@ async def create_shot_frame_prompt_task(
     )
     await mark_shot_generating(db, shot_id=body.shot_id)
     await db.commit()
+
+    from app.tasks.execute_task import enqueue_task_execution
 
     enqueue_task_execution(task_record.id)
     return created_response(TaskCreated(task_id=task_record.id))
