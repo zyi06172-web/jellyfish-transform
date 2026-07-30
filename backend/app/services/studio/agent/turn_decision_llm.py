@@ -17,6 +17,16 @@ class LLMAgentTurnDecisionLLM(AgentDecisionLLM):
         self._llm = llm
 
     async def decide(self, command: AgentTurnCommand, state: AgentSessionState) -> AgentDecision:
+        """根据当前阶段决定用户文本意图；intake 阶段贴剧本走确定性 analyze。"""
+        if state.stage.value == "intake" and command.input.text.strip():
+            return AgentDecision(
+                intent="analyze",
+                target_type="project",
+                target_id=command.project_id,
+                arguments={"raw_script": command.input.text.strip()},
+                assistant_message="已收到剧本，我会先严格解析故事构成、角色和分镜信息。",
+                confidence=1.0,
+            )
         known_targets = {
             key: sorted(values)
             for key, values in state.known_targets.items()

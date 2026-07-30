@@ -3,15 +3,27 @@
 from __future__ import annotations
 
 import json
+import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.utils import apply_keyword_filter, apply_order, paginate
 from app.dependencies import get_db
-from app.models.studio import Project
-from app.models.types import AgentActionType, AgentSessionStage, ProjectStyle, ProjectVisualStyle
+from app.models.studio import AgentArtifact, AgentMessage, AgentSession, Chapter, Project
+from app.models.types import (
+    AgentActionType,
+    AgentArtifactKind,
+    AgentArtifactStatus,
+    ChapterStatus,
+    AgentMessageKind,
+    AgentMessageRole,
+    AgentSessionStage,
+    AgentSessionStatus,
+    ProjectStyle,
+    ProjectVisualStyle,
+)
 from app.schemas.common import ApiResponse, PaginatedData, created_response, empty_response, paginated_response, success_response
 from app.schemas.studio.agent_workspace import (
     AgentMessageRead,
@@ -34,6 +46,10 @@ from app.services.common import (
 from app.schemas.studio.projects import (
     ProjectCreate,
     ProjectAssetLibraryRead,
+    ProjectCanvasActionRead,
+    ProjectCanvasActionRequest,
+    ProjectBlankCanvasRead,
+    ProjectBlankCanvasRequest,
     ProjectCanvasStateRead,
     ProjectCanvasStateUpdate,
     ProjectCanvasViewport,
@@ -165,6 +181,81 @@ async def create_project(
 
 
 @router.post(
+    "/blank-canvas",
+    response_model=ApiResponse[ProjectBlankCanvasRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="创建空白女娲画布并初始化 Agent 会话",
+)
+async def create_blank_canvas_project(
+    body: ProjectBlankCanvasRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectBlankCanvasRead]:
+    """创建空白画布，让用户从画布内 AgentDock 贴剧本开始。"""
+    existing = (
+        await db.execute(
+            select(AgentSession)
+            .where(AgentSession.state["idempotency_key"].as_string() == body.idempotency_key)
+            .limit(1)
+        )
+    ).scalars().first()
+    if existing is not None:
+        return created_response(
+            ProjectBlankCanvasRead(
+                id=existing.project_id,
+                project_id=existing.project_id,
+                session_id=existing.id,
+                status=existing.status.value if hasattr(existing.status, "value") else str(existing.status),
+            )
+        )
+
+    project_id = f"proj_{uuid.uuid4().hex}"
+    session_id = f"agent_session_{uuid.uuid4().hex}"
+    project = Project(
+        id=project_id,
+        name=body.name.strip() or "画布1",
+        description="",
+        style=ProjectStyle.real_people_city,
+        visual_style=ProjectVisualStyle.live_action,
+        seed=0,
+        unify_style=True,
+        progress=0,
+        default_video_ratio=body.default_video_ratio or "16:9",
+        stats={"created_from": "blank_canvas", "canvas_name": body.name.strip() or "画布1"},
+    )
+    session = AgentSession(
+        id=session_id,
+        project_id=project_id,
+        current_stage=AgentSessionStage.intake,
+        status=AgentSessionStatus.waiting_user,
+        revision=0,
+        state={"source": "blank_canvas", "idempotency_key": body.idempotency_key},
+    )
+    message = AgentMessage(
+        id=f"agent_message_{uuid.uuid4().hex}",
+        session_id=session_id,
+        sequence=1,
+        role=AgentMessageRole.assistant,
+        kind=AgentMessageKind.question_card,
+        content="请在右下角对话框粘贴剧本，我会先严格解析故事构成、角色和分镜信息。",
+        payload={"stage": AgentSessionStage.intake.value},
+    )
+    db.add(project)
+    await db.flush()
+    db.add(session)
+    await db.flush()
+    db.add(message)
+    await db.commit()
+    return created_response(
+        ProjectBlankCanvasRead(
+            id=project_id,
+            project_id=project_id,
+            session_id=session_id,
+            status=AgentSessionStatus.waiting_user.value,
+        )
+    )
+
+
+@router.post(
     "/from-prompt",
     response_model=ApiResponse[ProjectFromPromptRead],
     status_code=status.HTTP_201_CREATED,
@@ -259,6 +350,12 @@ async def handle_project_agent_turn(
             idempotency_key=body.idempotency_key,
         )
     for index, action in enumerate(result.actions):
+        if action.action_type == AgentActionType.analyze and action.target_type == "project":
+            await _persist_intake_script(
+                db,
+                project_id=project_id,
+                raw_script=str(action.input.get("raw_script") or body.input.text or ""),
+            )
         if action.action_type == AgentActionType.regenerate_target and action.target_type == "character":
             await regenerate_element_image(
                 db,
@@ -299,6 +396,67 @@ async def get_project_asset_library(
 ) -> ApiResponse[ProjectAssetLibraryRead]:
     await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
     return success_response(await build_project_asset_library(db, project_id=project_id))
+
+
+@router.post(
+    "/{project_id}/canvas-actions",
+    response_model=ApiResponse[ProjectCanvasActionRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="记录第6批画布节点动作并推进 Agent 阶段",
+)
+async def create_project_canvas_action(
+    project_id: str,
+    body: ProjectCanvasActionRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApiResponse[ProjectCanvasActionRead]:
+    """把画布动作追加为 Agent 消息和 artifact；付费阶段必须带显式确认。"""
+    project = await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
+    session = await db.get(AgentSession, body.session_id)
+    if session is None or session.project_id != project_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=entity_not_found("AgentSession"))
+    if body.action in {"keyframe_render", "video_generate"} and not body.confirmed_paid_cost:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="paid cost confirmation is required")
+
+    existing = await _find_canvas_action_artifact(db, project_id=project_id, idempotency_key=body.idempotency_key)
+    if existing is not None:
+        return created_response(
+            ProjectCanvasActionRead(
+                project_id=project_id,
+                session_id=session.id,
+                stage=str(session.current_stage.value if hasattr(session.current_stage, "value") else session.current_stage),
+                status=str(session.status.value if hasattr(session.status, "value") else session.status),
+                artifact_id=existing.id,
+                paid_call_enqueued=False,
+            )
+        )
+
+    artifact_kind = _artifact_kind_for_canvas_action(body.action)
+    stage = _stage_for_canvas_action(body.action)
+    artifact_id = await _append_canvas_action_artifact(
+        db,
+        project=project,
+        session=session,
+        stage=stage,
+        kind=artifact_kind,
+        action=body.action,
+        idempotency_key=body.idempotency_key,
+        model=body.model,
+        item_count=body.item_count,
+        estimated_cny=body.estimated_cny,
+        payload=body.payload,
+        paid_call_enqueued=False,
+    )
+    await db.commit()
+    return created_response(
+        ProjectCanvasActionRead(
+            project_id=project_id,
+            session_id=session.id,
+            stage=stage.value,
+            status=AgentSessionStatus.waiting_user.value,
+            artifact_id=artifact_id,
+            paid_call_enqueued=False,
+        )
+    )
 
 
 @router.get(
@@ -459,3 +617,234 @@ def _message_to_read(message) -> AgentMessageRead:  # noqa: ANN001
         content=message.content,
         payload=message.payload,
     )
+
+
+async def _persist_intake_script(db: AsyncSession, *, project_id: str, raw_script: str) -> None:
+    """把画布对话框贴入的剧本落到章节与 artifact，供 script 节点恢复。"""
+    script = raw_script.strip()
+    if not script:
+        return
+    project = await db.get(Project, project_id)
+    if project is None:
+        return
+    chapter = (
+        await db.execute(
+            select(Chapter)
+            .where(Chapter.project_id == project_id)
+            .order_by(Chapter.index.asc())
+            .limit(1)
+        )
+    ).scalars().first()
+    if chapter is None:
+        chapter = Chapter(
+            id=f"chapter_{uuid.uuid4().hex}",
+            project_id=project_id,
+            index=1,
+            title="第 1 章",
+            summary="从画布 AgentDock 粘贴的剧本。",
+            raw_text=script,
+            condensed_text=script,
+            storyboard_count=0,
+            status=ChapterStatus.draft,
+        )
+        db.add(chapter)
+    else:
+        chapter.raw_text = script
+        chapter.condensed_text = script
+
+    latest_version = int(
+        await db.scalar(
+            select(func.max(AgentArtifact.version))
+            .where(AgentArtifact.project_id == project_id, AgentArtifact.kind == AgentArtifactKind.story_summary)
+        ) or 0
+    )
+    artifact = AgentArtifact(
+        id=f"agent_artifact_{uuid.uuid4().hex}",
+        project_id=project_id,
+        kind=AgentArtifactKind.story_summary,
+        version=latest_version + 1,
+        status=AgentArtifactStatus.draft,
+        content_text=script,
+        content_json={
+            "source": "canvas_agent_dock",
+            "raw_script": script,
+            "story_structure": {},
+            "characters": [],
+            "shots_info": {},
+        },
+    )
+    db.add(artifact)
+    project.description = script[:500]
+    project.progress = max(project.progress or 0, 5)
+    project.stats = {
+        **(project.stats or {}),
+        "source_prompt": script,
+        "script_artifact_id": artifact.id,
+    }
+    await db.commit()
+
+
+def _artifact_kind_for_canvas_action(action: str) -> AgentArtifactKind:
+    """把画布动作映射为第6批正式 Agent 产物类型。"""
+    mapping = {
+        "script_parsed": AgentArtifactKind.story_summary,
+        "assets_ready": AgentArtifactKind.final_video_spec,
+        "storyboard_ready": AgentArtifactKind.storyboard,
+        "shotlist_text_ready": AgentArtifactKind.shotlist_text,
+        "keyframe_render": AgentArtifactKind.keyframe,
+        "shotlist_render_ready": AgentArtifactKind.shotlist_render,
+        "video_generate": AgentArtifactKind.video,
+    }
+    return mapping[action]
+
+
+def _stage_for_canvas_action(action: str) -> AgentSessionStage:
+    """把画布动作映射为 Agent 正式阶段；旧链路阶段保持兼容。"""
+    mapping = {
+        "script_parsed": AgentSessionStage.spec_review,
+        "assets_ready": AgentSessionStage.elements_review,
+        "storyboard_ready": AgentSessionStage.storyboard,
+        "shotlist_text_ready": AgentSessionStage.shotlist_text,
+        "keyframe_render": AgentSessionStage.keyframe,
+        "shotlist_render_ready": AgentSessionStage.shotlist_render,
+        "video_generate": AgentSessionStage.shot_video,
+    }
+    return mapping[action]
+
+
+async def _find_canvas_action_artifact(
+    db: AsyncSession,
+    *,
+    project_id: str,
+    idempotency_key: str,
+) -> AgentArtifact | None:
+    """按幂等键查找已有画布动作产物，避免重复点击创建重复记录。"""
+    return (
+        await db.execute(
+            select(AgentArtifact)
+            .where(
+                AgentArtifact.project_id == project_id,
+                AgentArtifact.content_json["idempotency_key"].as_string() == idempotency_key,
+            )
+            .limit(1)
+        )
+    ).scalars().first()
+
+
+async def _append_canvas_action_artifact(
+    db: AsyncSession,
+    *,
+    project: Project,
+    session: AgentSession,
+    stage: AgentSessionStage,
+    kind: AgentArtifactKind,
+    action: str,
+    idempotency_key: str,
+    model: str,
+    item_count: int,
+    estimated_cny: float | None,
+    payload: dict,
+    paid_call_enqueued: bool,
+) -> str:
+    """追加画布动作消息和 artifact；不覆盖旧产物，重做会自然形成新版本。"""
+    message = AgentMessage(
+        id=f"agent_message_{uuid.uuid4().hex}",
+        session_id=session.id,
+        sequence=int(await db.scalar(select(func.max(AgentMessage.sequence)).where(AgentMessage.session_id == session.id)) or 0) + 1,
+        role=AgentMessageRole.assistant,
+        kind=AgentMessageKind.task_update,
+        content=_canvas_action_message(action=action, item_count=item_count, model=model, paid_call_enqueued=paid_call_enqueued),
+        payload={
+            "stage": stage.value,
+            "canvas_action": action,
+            "idempotency_key": idempotency_key,
+            "paid_call_enqueued": paid_call_enqueued,
+        },
+    )
+    db.add(message)
+    await db.flush()
+
+    latest_version = int(
+        await db.scalar(
+            select(func.max(AgentArtifact.version))
+            .where(AgentArtifact.project_id == project.id, AgentArtifact.kind == kind)
+        ) or 0
+    )
+    artifact = AgentArtifact(
+        id=f"agent_artifact_{uuid.uuid4().hex}",
+        project_id=project.id,
+        kind=kind,
+        version=latest_version + 1,
+        status=AgentArtifactStatus.draft,
+        content_text=_canvas_action_summary(action=action, item_count=item_count, model=model),
+        content_json={
+            **payload,
+            "canvas_action": action,
+            "idempotency_key": idempotency_key,
+            "stage": stage.value,
+            "model": model,
+            "item_count": item_count,
+            "estimated_cny": estimated_cny,
+            "paid_call_enqueued": paid_call_enqueued,
+        },
+        created_by_message_id=message.id,
+    )
+    db.add(artifact)
+    session.current_stage = stage
+    session.status = AgentSessionStatus.waiting_user
+    session.revision += 1
+    state = session.state or {}
+    completed = set(state.get("completed_stages") or [])
+    completed.add(stage.value)
+    session.state = {
+        **state,
+        "pending_stage": stage.value,
+        "completed_stages": sorted(completed),
+        "last_canvas_action": action,
+        "last_canvas_artifact_id": artifact.id,
+    }
+    project.progress = max(project.progress or 0, _progress_for_canvas_action(action))
+    project.stats = {
+        **(project.stats or {}),
+        "last_canvas_action": action,
+        "last_canvas_stage": stage.value,
+    }
+    await db.flush()
+    return artifact.id
+
+
+def _canvas_action_summary(*, action: str, item_count: int, model: str) -> str:
+    """生成 artifact 的一句话摘要，六要素继续留在 JSON 内。"""
+    labels = {
+        "script_parsed": "剧本已贴入并进入严格解析",
+        "assets_ready": "人物、场景和道具资产已进入画布资产阶段",
+        "storyboard_ready": "手绘故事板已进入画布预审",
+        "shotlist_text_ready": "文字版分镜表已进入免费预审",
+        "keyframe_render": "关键帧渲染已通过成本确认",
+        "shotlist_render_ready": "渲染版分镜表已复用关键帧生成",
+        "video_generate": "视频生成已通过成本确认",
+    }
+    count_text = f"{item_count} 个" if item_count else ""
+    model_text = f"（{model}）" if model else ""
+    return f"{labels.get(action, action)}{count_text}{model_text}"
+
+
+def _canvas_action_message(*, action: str, item_count: int, model: str, paid_call_enqueued: bool) -> str:
+    """生成 AgentDock 展示消息，不展开隐藏的六要素结构。"""
+    summary = _canvas_action_summary(action=action, item_count=item_count, model=model)
+    if action in {"keyframe_render", "video_generate"} and not paid_call_enqueued:
+        return f"{summary}。已记录确认，后续执行器接入后再创建付费任务。"
+    return f"{summary}。"
+
+
+def _progress_for_canvas_action(action: str) -> int:
+    """给画布链路动作映射粗粒度项目进度。"""
+    return {
+        "script_parsed": 10,
+        "assets_ready": 25,
+        "storyboard_ready": 40,
+        "shotlist_text_ready": 55,
+        "keyframe_render": 70,
+        "shotlist_render_ready": 82,
+        "video_generate": 95,
+    }.get(action, 5)

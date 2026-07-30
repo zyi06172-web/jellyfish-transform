@@ -1,24 +1,26 @@
-import { ArrowUpOutlined, CheckOutlined, CloseOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { ArrowUpOutlined, CheckOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Alert, Button, Input, Spin } from 'antd'
 import { useState } from 'react'
-import type { AgentMessageRead, AgentQuestionCardRead } from '../../../../../services/generated'
+import type { AgentMessageRead, AgentQuestionCardRead } from '../../services/generated'
 
 function messageClass(role: AgentMessageRead['role']) {
   return role === 'user' ? 'ml-10 bg-white text-black' : 'mr-10 bg-white/[.08] text-white/72'
 }
 
-/** AgentChat 承载女娲工作台的 Agent 回合消息、确认卡片和输入框，供画布浮层复用。 */
-export function AgentChat({
+/** AgentDock 是画布右下角问答栏，驱动正式 Agent 阶段并保持可折叠浮层形态。 */
+export function AgentDock({
   messages,
   questionCard,
   revision,
   loading,
   submitting,
   error,
+  collapsed,
+  onCollapse,
+  onExpand,
+  onRefresh,
   onChoice,
   onText,
-  onRefresh,
-  onCollapse,
 }: {
   messages: AgentMessageRead[]
   questionCard?: AgentQuestionCardRead | null
@@ -26,10 +28,12 @@ export function AgentChat({
   loading: boolean
   submitting: boolean
   error?: string | null
+  collapsed: boolean
+  onCollapse: () => void
+  onExpand: () => void
+  onRefresh: () => void
   onChoice: (choiceId: string) => void
   onText: (text: string) => void
-  onRefresh: () => void
-  onCollapse?: () => void
 }) {
   const [text, setText] = useState('')
   const submit = () => {
@@ -37,6 +41,14 @@ export function AgentChat({
     if (!value) return
     onText(value)
     setText('')
+  }
+
+  if (collapsed) {
+    return (
+      <Button className="nuwa-agent-float-launcher" onClick={onExpand}>
+        Agent
+      </Button>
+    )
   }
 
   return (
@@ -48,7 +60,7 @@ export function AgentChat({
         </div>
         <div className="flex items-center gap-1">
           <Button shape="circle" type="text" icon={<ReloadOutlined />} className="!text-white" onClick={onRefresh} />
-          {onCollapse ? <Button shape="circle" type="text" icon={<CloseOutlined />} className="!text-white" onClick={onCollapse} /> : null}
+          <Button shape="circle" type="text" icon={<CloseOutlined />} className="!text-white" onClick={onCollapse} />
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
@@ -57,20 +69,18 @@ export function AgentChat({
           <div className="flex h-full items-center justify-center"><Spin /></div>
         ) : (
           <div className="space-y-3">
-            {messages.length ? (
-              messages.map((message, index) => (
-                <div key={`${message.role}-${index}-${message.content}`} className={`rounded-lg px-3 py-2 text-xs leading-relaxed ${messageClass(message.role)}`}>
-                  <div className="mb-1 text-[11px] opacity-60">{message.kind}</div>
-                  {message.content}
-                </div>
-              ))
-            ) : (
+            {messages.length ? messages.map((message, index) => (
+              <div key={`${message.role}-${index}-${message.content}`} className={`rounded-lg px-3 py-2 text-xs leading-relaxed ${messageClass(message.role)}`}>
+                <div className="mb-1 text-[11px] opacity-60">{message.kind}</div>
+                {message.content}
+              </div>
+            )) : (
               <div className="rounded-lg border border-dashed border-white/[.12] bg-white/[.04] p-4 text-sm text-white/42">
-                正在分析剧情…
+                贴入剧本后，Agent 会从解析、资产、故事板一路推进。
               </div>
             )}
             {questionCard ? (
-              <div className="mt-4 rounded-lg border border-white/[.08] bg-white/[.06] p-3 shadow-sm">
+              <div className="rounded-lg border border-white/[.08] bg-white/[.06] p-3">
                 <div className="mb-3 flex items-start gap-2 text-sm font-semibold">
                   <CheckOutlined className="mt-1 text-white/40" />
                   <span>{questionCard.question}</span>
@@ -99,13 +109,13 @@ export function AgentChat({
         )}
       </div>
       <div className="shrink-0 border-t border-white/[.06] p-3">
-        <div className="rounded-lg border border-white/[.08] bg-white/[.08] p-2.5 shadow-sm">
+        <div className="rounded-lg border border-white/[.08] bg-white/[.08] p-2.5">
           <Input.TextArea
             value={text}
             onChange={(event) => setText(event.target.value)}
-            autoSize={{ minRows: 2, maxRows: 4 }}
+            autoSize={{ minRows: 2, maxRows: 5 }}
             bordered={false}
-            placeholder="输入修改意见或补充要求"
+            placeholder="粘贴剧本，或补充当前问题。例：婚礼当天，新郎逃婚……"
             className="flova-chat-input"
             onPressEnter={(event) => {
               if (!event.shiftKey) {
@@ -114,8 +124,7 @@ export function AgentChat({
               }
             }}
           />
-          <div className="mt-3 flex items-center gap-2">
-            <Button shape="circle" icon={<PlusOutlined />} />
+          <div className="mt-3 flex items-center">
             <Button className="ml-auto" shape="circle" loading={submitting} icon={<ArrowUpOutlined />} onClick={submit} />
           </div>
         </div>

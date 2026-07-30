@@ -239,7 +239,7 @@ async def generate_hand_drawn_storyboard_for_shot(
         relation_entity_id=shot_id,
         prompt=spec.prompt,
         images=refs,
-        target_ratio="9:16",
+        target_ratio="16:9",
         resolution_profile="standard",
         purpose="video_reference",
         render_context={
@@ -867,7 +867,7 @@ async def _upsert_storyboard_artifact(
         {
             "shot_id": shot_id,
             "style": "hand_drawn_storyboard",
-            "aspect_ratio": "9:16",
+            "aspect_ratio": "16:9",
             "visible_summary": spec.one_sentence_summary,
             "six_elements_for_video_model": spec.six_elements,
             "image_file_id": file_id,

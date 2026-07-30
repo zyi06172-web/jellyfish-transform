@@ -129,7 +129,7 @@ def _build_video_prompt_request(
     character_assets = [item.model_dump() for item in pack.characters]
     scene_asset = pack.scene.model_dump() if pack.scene else None
     seconds = base.seconds if base.seconds not in (None, "") else pack.camera.duration
-    ratio = base.ratio or "9:16"
+    ratio = base.ratio or "16:9"
     action_beats = list(pack.action_beats)
     movement_delta = _movement_delta_from_pack(pack)
     return VideoPromptRequest(

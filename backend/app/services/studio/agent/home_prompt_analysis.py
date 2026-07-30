@@ -446,8 +446,8 @@ def _default_ratio_for_skill(skill_key: str) -> str:
     return {
         "long_video": "16:9",
         "commercial": "1:1",
-        "short_drama": "9:16",
-    }.get(skill_key, "9:16")
+        "short_drama": "16:9",
+    }.get(skill_key, "16:9")
 
 
 def _genre_for_skill(skill_key: str) -> str:

@@ -8,11 +8,15 @@ import type { ApiResponse_AgentWorkspaceSnapshotRead_ } from '../models/ApiRespo
 import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
 import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
 import type { ApiResponse_ProjectAssetLibraryRead_ } from '../models/ApiResponse_ProjectAssetLibraryRead_';
+import type { ApiResponse_ProjectBlankCanvasRead_ } from '../models/ApiResponse_ProjectBlankCanvasRead_';
+import type { ApiResponse_ProjectCanvasActionRead_ } from '../models/ApiResponse_ProjectCanvasActionRead_';
 import type { ApiResponse_ProjectCanvasStateRead_ } from '../models/ApiResponse_ProjectCanvasStateRead_';
 import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
 import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
 import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
 import type { ProjectCreate } from '../models/ProjectCreate';
+import type { ProjectBlankCanvasRequest } from '../models/ProjectBlankCanvasRequest';
+import type { ProjectCanvasActionRequest } from '../models/ProjectCanvasActionRequest';
 import type { ProjectCanvasStateUpdate } from '../models/ProjectCanvasStateUpdate';
 import type { ProjectFromPromptRequest } from '../models/ProjectFromPromptRequest';
 import type { ProjectUpdate } from '../models/ProjectUpdate';
@@ -86,6 +90,26 @@ export class StudioProjectsService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/studio/projects',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 创建空白女娲画布并初始化 Agent 会话
+     * @returns ApiResponse_ProjectBlankCanvasRead_ Successful Response
+     * @throws ApiError
+     */
+    public static createBlankCanvasProjectApiV1StudioProjectsBlankCanvasPost({
+        requestBody,
+    }: {
+        requestBody: ProjectBlankCanvasRequest,
+    }): CancelablePromise<ApiResponse_ProjectBlankCanvasRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/blank-canvas',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -175,6 +199,31 @@ export class StudioProjectsService {
             path: {
                 'project_id': projectId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 记录第6批画布节点动作并推进 Agent 阶段
+     * @returns ApiResponse_ProjectCanvasActionRead_ Successful Response
+     * @throws ApiError
+     */
+    public static createProjectCanvasActionApiV1StudioProjectsProjectIdCanvasActionsPost({
+        projectId,
+        requestBody,
+    }: {
+        projectId: string,
+        requestBody: ProjectCanvasActionRequest,
+    }): CancelablePromise<ApiResponse_ProjectCanvasActionRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/{project_id}/canvas-actions',
+            path: {
+                'project_id': projectId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

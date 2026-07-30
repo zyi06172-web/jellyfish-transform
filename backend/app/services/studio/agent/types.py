@@ -109,7 +109,7 @@ class AgentSessionState:
 
 @dataclass(frozen=True)
 class WorkspaceSnapshot:
-    """工作台四栏恢复所需的聚合快照骨架。"""
+    """Agent 工作台恢复所需的聚合快照骨架。"""
 
     project_id: str
     session_id: str

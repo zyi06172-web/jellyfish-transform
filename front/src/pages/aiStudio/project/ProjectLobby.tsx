@@ -3,11 +3,7 @@ import { Button, message } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { StudioProjectsService } from '../../../services/generated'
-import {
-  DEFAULT_CANVAS_PROMPT,
-  DEFAULT_CANVAS_SKILL_KEY,
-  createHomePromptIdempotencyKey,
-} from './homeProjectCreation'
+import { createHomePromptIdempotencyKey } from './homeProjectCreation'
 
 /** 女娲首页：只保留创作入口，把项目画布列表交给“项目”导航承载。 */
 const ProjectLobby: React.FC = () => {
@@ -18,16 +14,16 @@ const ProjectLobby: React.FC = () => {
   const handleCreateCanvas = async () => {
     setCreating(true)
     try {
-      const res = await StudioProjectsService.createProjectFromPromptApiV1StudioProjectsFromPromptPost({
+      const res = await StudioProjectsService.createBlankCanvasProjectApiV1StudioProjectsBlankCanvasPost({
         requestBody: {
-          prompt: DEFAULT_CANVAS_PROMPT,
-          skill_key: DEFAULT_CANVAS_SKILL_KEY,
+          name: '画布1',
+          default_video_ratio: '16:9',
           idempotency_key: createHomePromptIdempotencyKey(),
         },
       })
       const created = res.data
       if (!created) throw new Error('empty project')
-      message.success('画布已创建，正在分析剧情…')
+      message.success('画布已创建，请在右下角对话框贴入剧本')
       navigate(`/projects/${created.project_id}`)
     } catch {
       message.error('画布创建失败，请检查后端服务')

@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class RegenerateElementServices:
     synthesize_prompt: Callable[[AsyncSession, ImagePromptRequest], Awaitable[str]]
-    create_image_task: Callable[[AsyncSession, CharacterImage, str], Awaitable[str]]
+    create_image_task: Callable[[AsyncSession, CharacterImage, str, str], Awaitable[str]]
 
 
 def default_regenerate_element_services() -> RegenerateElementServices:
@@ -108,12 +108,12 @@ async def regenerate_element_image(
         chinese_environment=True,
         extra_context={
             "phase": "phase7_regenerate_element_image",
-            "target_ratio": "9:16",
+            "target_ratio": spec.aspect_ratio,
             "regeneration_note": action.input or {},
         },
     )
     prompt = await services.synthesize_prompt(db, prompt_request)
-    task_id = await services.create_image_task(db, image_slot, prompt)
+    task_id = await services.create_image_task(db, image_slot, prompt, spec.aspect_ratio)
 
     action.status = AgentActionStatus.succeeded
     action.task_id = task_id
@@ -123,7 +123,7 @@ async def regenerate_element_image(
             "task_id": task_id,
             "character_image_id": image_slot.id,
             "character_id": character.id,
-            "target_ratio": "9:16",
+            "target_ratio": spec.aspect_ratio,
             "prompt": prompt,
         }
     )
@@ -137,15 +137,16 @@ async def regenerate_element_image(
             "target_id": character.id,
             "task_id": task_id,
             "character_image_id": image_slot.id,
-            "target_ratio": "9:16",
+            "target_ratio": spec.aspect_ratio,
         },
     )
     await db.flush()
     logger.info(
-        "Agent local regeneration: character image task created action_id=%s character_id=%s task_id=%s ratio=9:16",
+        "Agent local regeneration: character image task created action_id=%s character_id=%s task_id=%s ratio=%s",
         action.id,
         character.id,
         task_id,
+        spec.aspect_ratio,
     )
     return task_id
 
@@ -241,14 +242,14 @@ def _character_element_bible(character: Character) -> ElementBible:
     )
 
 
-async def _create_regeneration_image_task(db: AsyncSession, image_slot: CharacterImage, prompt: str) -> str:
+async def _create_regeneration_image_task(db: AsyncSession, image_slot: CharacterImage, prompt: str, target_ratio: str) -> str:
     return await create_image_task_and_link(
         db=db,
         model_id=None,
         relation_type="character_image",
         relation_entity_id=str(image_slot.id),
         prompt=prompt,
-        target_ratio="9:16",
+        target_ratio=target_ratio,
         resolution_profile="standard",
         purpose="asset_image",
         render_context={

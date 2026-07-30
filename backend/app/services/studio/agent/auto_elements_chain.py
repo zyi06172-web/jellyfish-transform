@@ -90,7 +90,7 @@ class AutoElementsServices:
     run_task: Callable[[AsyncSession, str, str], Awaitable[None] | None]
     auto_confirm_l3: Callable[[AsyncSession, str], Awaitable[Any]]
     synthesize_prompt: Callable[[AsyncSession, ImagePromptRequest], Awaitable[str]]
-    create_image_task: Callable[[AsyncSession, ElementImageTarget, str], Awaitable[str]]
+    create_image_task: Callable[[AsyncSession, ElementImageTarget, str, str], Awaitable[str]]
 
 
 def default_auto_elements_services() -> AutoElementsServices:
@@ -276,7 +276,7 @@ async def execute_agent_auto_elements_chain(
             )
             await db.commit()
 
-            image_task_id = await services.create_image_task(db, target, prompt)
+            image_task_id = await services.create_image_task(db, target, prompt, spec.aspect_ratio)
             image_task_ids.append(image_task_id)
             await _create_action(
                 db,
@@ -285,35 +285,36 @@ async def execute_agent_auto_elements_chain(
                 target_type=target.kind,
                 target_id=target.entity_id,
                 idempotency_key=f"{idempotency_key}:image:{target.kind}:{target.entity_id}",
-                input_payload={"task_id": image_task_id, "target_ratio": "9:16", "model_category": "image"},
-                output_payload={"task_id": image_task_id, "target_ratio": "9:16"},
+                input_payload={"task_id": image_task_id, "target_ratio": spec.aspect_ratio, "model_category": "image"},
+                output_payload={"task_id": image_task_id, "target_ratio": spec.aspect_ratio},
                 task_id=image_task_id,
             )
             await _append_task_update(
                 db,
                 session_id=session_id,
-                content=f"{target.name} 的 9:16 关键元素图生成完成。",
+                content=f"{target.name} 的 {spec.aspect_ratio} 关键元素图生成完成。",
                 payload={
                     "stage": "elements_gen",
                     "task_id": image_task_id,
                     "element_kind": target.kind,
                     "element_id": target.entity_id,
-                    "target_ratio": "9:16",
+                    "target_ratio": spec.aspect_ratio,
                     "status_code": 200,
                 },
             )
             logger.info(
-                "Agent auto chain: Seedream 出图 200 task_id=%s element=%s/%s target_ratio=9:16",
+                "Agent auto chain: Seedream 出图 200 task_id=%s element=%s/%s target_ratio=%s",
                 image_task_id,
                 target.kind,
                 target.entity_id,
+                spec.aspect_ratio,
             )
             await db.commit()
 
         await _complete_stage(db, session, AgentSessionStage.elements_gen)
         await _finish_at_elements_review(db, session, image_task_ids=image_task_ids)
         chain_action.status = AgentActionStatus.succeeded
-        chain_action.output = _json_safe({"chapter_id": chapter.id, "image_task_ids": image_task_ids, "target_ratio": "9:16"})
+        chain_action.output = _json_safe({"chapter_id": chapter.id, "image_task_ids": image_task_ids, "target_ratio": spec.aspect_ratio})
         logger.info(
             "一次确认→自动依次调 DeepSeek 拆分镜 + Seedream 出图，均 200: project_id=%s session_id=%s image_count=%s",
             project_id,
@@ -379,14 +380,14 @@ async def _auto_confirm_l3(db: AsyncSession, chapter_id: str) -> Any:
     return await auto_confirm_chapter_candidates(db, chapter_id=chapter_id, level="L3")
 
 
-async def _create_and_run_image_task(db: AsyncSession, target: ElementImageTarget, prompt: str) -> str:
+async def _create_and_run_image_task(db: AsyncSession, target: ElementImageTarget, prompt: str, target_ratio: str) -> str:
     task_id = await create_image_task_and_link(
         db=db,
         model_id=None,
         relation_type=target.relation_type,
         relation_entity_id=target.relation_entity_id,
         prompt=prompt,
-        target_ratio="9:16",
+        target_ratio=target_ratio,
         resolution_profile="standard",
         purpose="asset_image",
         render_context={
@@ -645,7 +646,7 @@ async def _final_video_spec(db: AsyncSession, *, project: Project) -> FinalVideo
         title=str(raw.get("title") or project.name),
         output_language=str(raw.get("output_language") or "中文"),
         visual_style=str(raw.get("visual_style") or project.visual_style),
-        aspect_ratio="9:16",
+        aspect_ratio=str(raw.get("aspect_ratio") or project.default_video_ratio or "16:9"),
     )
 
 
@@ -674,9 +675,9 @@ def _image_prompt_request(*, spec: FinalVideoSpec, target: ElementImageTarget) -
     return ImagePromptRequest(
         final_video_spec=spec,
         element=element,
-        user_instruction="生成关键元素参考图，画面比例 9:16。",
+        user_instruction=f"生成关键元素参考图，画面比例 {spec.aspect_ratio}。",
         chinese_environment=True,
-        extra_context={"phase": "phase6", "target_ratio": "9:16"},
+        extra_context={"phase": "phase6", "target_ratio": spec.aspect_ratio},
     )
 
 
@@ -773,7 +774,7 @@ async def _finish_at_elements_review(db: AsyncSession, session: AgentSession, *,
         db,
         session_id=session.id,
         content="关键元素图已生成，请确认是否进入下一批。",
-        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "9:16"},
+        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "16:9"},
     )
     message = AgentMessage(
         id=_new_id("agent_message"),
@@ -782,7 +783,7 @@ async def _finish_at_elements_review(db: AsyncSession, session: AgentSession, *,
         role=AgentMessageRole.assistant,
         kind=AgentMessageKind.question_card,
         content="关键元素图已生成，请确认是否进入下一批。",
-        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "9:16"},
+        payload={"stage": "elements_review", "image_task_ids": image_task_ids, "target_ratio": "16:9"},
     )
     db.add(message)
     await db.flush()

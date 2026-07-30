@@ -221,6 +221,9 @@ class AgentSessionStage(str, Enum):
     auto_confirm = "auto_confirm"
     elements_gen = "elements_gen"
     elements_review = "elements_review"
+    shotlist_text = "shotlist_text"
+    keyframe = "keyframe"
+    shotlist_render = "shotlist_render"
     voice_anchor = "voice_anchor"
     shot_video = "shot_video"
     audio_layer = "audio_layer"
@@ -271,6 +274,10 @@ class AgentArtifactKind(str, Enum):
     story_summary = "story_summary"
     final_video_spec = "final_video_spec"
     storyboard = "storyboard"
+    shotlist_text = "shotlist_text"
+    keyframe = "keyframe"
+    shotlist_render = "shotlist_render"
+    video = "video"
 
 
 class AgentArtifactStatus(str, Enum):

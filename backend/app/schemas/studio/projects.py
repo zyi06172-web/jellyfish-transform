@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -57,6 +58,55 @@ class ProjectFromPromptRead(BaseModel):
     project_id: str = Field(..., description="项目 ID")
     session_id: str = Field(..., description="Agent session ID")
     status: str = Field(..., description="分析动作状态")
+
+
+class ProjectBlankCanvasRequest(BaseModel):
+    """创建空白女娲画布，不触发首页 from-prompt 分析。"""
+
+    name: str = Field("画布1", description="画布名称")
+    idempotency_key: str = Field(..., min_length=8, max_length=128, description="客户端幂等键")
+    default_video_ratio: str = Field("16:9", description="项目默认视频比例")
+
+
+class ProjectBlankCanvasRead(BaseModel):
+    """空白画布创建结果。"""
+
+    id: str = Field(..., description="项目 ID")
+    project_id: str = Field(..., description="项目 ID")
+    session_id: str = Field(..., description="Agent session ID")
+    status: str = Field(..., description="Agent session status")
+
+
+class ProjectCanvasActionRequest(BaseModel):
+    """画布节点动作请求；只通过显式确认入口触发付费阶段。"""
+
+    session_id: str = Field(..., description="Agent session ID")
+    action: Literal[
+        "script_parsed",
+        "assets_ready",
+        "storyboard_ready",
+        "shotlist_text_ready",
+        "keyframe_render",
+        "shotlist_render_ready",
+        "video_generate",
+    ] = Field(..., description="画布链路动作")
+    idempotency_key: str = Field(..., min_length=8, max_length=128, description="客户端幂等键")
+    confirmed_paid_cost: bool = Field(False, description="用户是否已确认付费成本闸门")
+    model: str = Field("", description="本次动作使用的模型说明")
+    item_count: int = Field(0, ge=0, description="预计生成数量")
+    estimated_cny: float | None = Field(None, ge=0, description="前端展示的预估费用")
+    payload: dict[str, Any] = Field(default_factory=dict, description="画布节点结构化载荷")
+
+
+class ProjectCanvasActionRead(BaseModel):
+    """画布动作写入后的 Agent 状态。"""
+
+    project_id: str = Field(..., description="项目 ID")
+    session_id: str = Field(..., description="Agent session ID")
+    stage: str = Field(..., description="当前 Agent 阶段")
+    status: str = Field(..., description="当前 Agent 状态")
+    artifact_id: str | None = Field(None, description="本次写入的产物 ID")
+    paid_call_enqueued: bool = Field(False, description="是否已经排入付费生成任务")
 
 
 class ChapterBase(BaseModel):

@@ -17,7 +17,7 @@ class FinalVideoSpec:
     title: str
     output_language: str = "中文"
     visual_style: str = ""
-    aspect_ratio: str = "9:16"
+    aspect_ratio: str = "16:9"
 
 
 @dataclass(frozen=True)

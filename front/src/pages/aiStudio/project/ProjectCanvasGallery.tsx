@@ -4,8 +4,6 @@ import { PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { StudioChaptersService, StudioProjectsService, type ChapterRead } from '../../../services/generated'
 import {
-  DEFAULT_CANVAS_PROMPT,
-  DEFAULT_CANVAS_SKILL_KEY,
   createHomePromptIdempotencyKey,
   toHomeProjectCard,
   type HomeProjectCard,
@@ -95,20 +93,20 @@ const ProjectCanvasGallery: React.FC = () => {
     }
   }
 
-  /** 没有任何项目时仍复用首页建项目 API 创建第一部剧。 */
+  /** 没有任何项目时创建空白画布，剧本从画布内 AgentDock 粘贴。 */
   const handleCreateFirstProject = async () => {
     setCreatingProjectId('__new_project__')
     try {
-      const res = await StudioProjectsService.createProjectFromPromptApiV1StudioProjectsFromPromptPost({
+      const res = await StudioProjectsService.createBlankCanvasProjectApiV1StudioProjectsBlankCanvasPost({
         requestBody: {
-          prompt: DEFAULT_CANVAS_PROMPT,
-          skill_key: DEFAULT_CANVAS_SKILL_KEY,
+          name: '画布1',
+          default_video_ratio: '16:9',
           idempotency_key: createHomePromptIdempotencyKey(),
         },
       })
       const created = res.data
       if (!created) throw new Error('empty project')
-      message.success('第一部剧已创建，正在分析剧情…')
+      message.success('第一部剧画布已创建，请在右下角对话框贴入剧本')
       navigate(`/projects/${created.project_id}`)
     } catch {
       message.error('项目创建失败，请检查后端服务')

@@ -187,7 +187,7 @@ def evaluate_turn(command: AgentTurnCommand, state: AgentSessionState, decision:
         message, card = _clarification(f"「{action_type.value}」已经在运行中，请等待当前任务完成。")
         return PolicyResult(state, message, card)
 
-    if decision.target_type and decision.target_id:
+    if decision.target_type and decision.target_id and decision.target_type != "project":
         known_ids = state.known_targets.get(decision.target_type, frozenset())
         if decision.target_id not in known_ids:
             message, card = _clarification(f"找不到目标「{decision.target_id}」，请从已有元素中选择。")

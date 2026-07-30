@@ -5,11 +5,15 @@ description: "当前女娲工作台的前端路由、画布节点、后端能力
 
 # 女娲画布工作台
 
-当前工作台以 `/projects/:projectId` 为唯一项目画布路由。一部剧是一个 project，一集是一个 chapter；`/canvases` 是多集管理器，点击某一集后进入 `/projects/:projectId?chapterId=:chapterId`。前端删除 Jellyfish 时代的固定分栏、旧章节页、旧镜头页、旧视频编辑器、旧全局资产库和后台管理页，只保留女娲首页、多集画布列表、项目画布、项目级资产库与热度排行榜。
+当前工作台以 `/projects/:projectId` 为项目画布路由。一部剧是一个 project，一集是一个 chapter；`/canvases` 是多集管理器，点击某一集后进入 `/projects/:projectId?chapterId=:chapterId`。旧 `ProjectWorkbench` 只保留路由桥，实际渲染第 6 批 `CanvasPage`。前端删除 Jellyfish 时代的固定分栏、旧章节页、旧镜头页、旧视频编辑器、旧全局资产库和后台管理页，只保留女娲首页、多集画布列表、项目画布、项目级资产库与热度排行榜。
 
-画布引擎使用 `@xyflow/react`。画布支持拖拽平移、滚轮缩放、框选、多选、节点拖动、节点复制、节点删除、连线、minimap、缩放控件、fit-view、画布右键新增节点与节点右键菜单。节点类型包括剧本、角色资产、场景资产、故事板、镜头分组、关键帧、分镜表和视频。
+画布引擎使用 `@xyflow/react`，第 6 批不换引擎。节点注册表位于 `front/src/components/nodes/index.ts`，注册十个独立节点键：`script`、`character`、`location`、`prop`、`storyboard`、`shot_group`、`keyframe`、`shotlist_text`、`shotlist_render`、`video`。每类节点有独立组件文件，共用外壳只放在 `NodeLayout` / `NodeToolbar` / `NodeStates`，不再使用旧的单组件分支渲染方案。
 
-Agent 仍然是主路径。画布右侧常驻 `AgentChat`，继续调用 `GET /api/v1/studio/projects/{project_id}/workspace` 和 `POST /api/v1/studio/projects/{project_id}/agent/turns`。前端只编排 UI，不直接调用模型；DeepSeek、Seedream、Seedance 的模型路由和工作流仍由后端服务负责。
+Agent 仍然是主路径。画布内右下角浮动 `AgentDock` 小面板，支持收起为轻量入口，不占用整条右侧栏。它继续调用 `GET /api/v1/studio/projects/{project_id}/workspace` 和 `POST /api/v1/studio/projects/{project_id}/agent/turns`。首页创建画布改走 `POST /api/v1/studio/projects/blank-canvas`，只创建空白 project 与 Agent session，不再用默认 from-prompt 文案触发首页分析。用户从画布内 AgentDock 粘贴剧本进入正式 Agent intake 阶段。
+
+项目默认比例读取 `Project.default_video_ratio`，为空时使用 `16:9`；镜头级后续可用 `ShotDetail.override_video_ratio` 覆盖。前端节点预览不再使用竖屏 CSS 硬编码。
+
+渲染和出视频前有两道前端成本闸门：开始关键帧渲染前、开始 Seedance 视频前必须弹出确认。确认前前端不调用图片或视频任务创建接口；确认后将确认意图提交给 Agent 工作流继续执行。
 
 项目资产库保留女娲版 `ProjectAssetLibraryPage`，入口为 `/projects/:projectId/asset-library`。全局 `/asset-library` 只作为项目资产库入口页，不再展示 Jellyfish 旧的四 tab 资产管理界面。
 
