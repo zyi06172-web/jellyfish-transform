@@ -1,0 +1,66 @@
+.nw-shotlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.nw-shotlist-table th {
+  text-align: left;
+  color: var(--nw-text-2);
+  font-weight: 500;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--nw-divider);
+}
+
+.nw-shotlist-row td {
+  padding: 8px;
+  border-bottom: 1px solid var(--nw-divider);
+  cursor: pointer;
+}
+
+.nw-shotlist-row:hover {
+  background: var(--nw-bg);
+}
+
+.nw-shotlist-expand td {
+  background: var(--nw-bg);
+  padding: 10px;
+}
+
+.nw-shotlist-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nw-shotlist-detail-title {
+  font-weight: 600;
+  margin-top: 6px;
+  color: var(--nw-text-2);
+  font-size: 11px;
+}
+
+.nw-shotlist-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nw-shotlist-render-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.nw-shotlist-render-table th,
+.nw-shotlist-render-table td {
+  border: 1px solid var(--nw-divider);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.nw-shotlist-render-thumb {
+  width: 84px;
+  border-radius: 6px;
+}

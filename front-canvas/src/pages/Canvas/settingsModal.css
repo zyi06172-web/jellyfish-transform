@@ -1,0 +1,19 @@
+.nw-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 8px;
+}
+
+.nw-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.nw-settings-row > span:first-child {
+  color: var(--nw-text-2);
+  flex-shrink: 0;
+}

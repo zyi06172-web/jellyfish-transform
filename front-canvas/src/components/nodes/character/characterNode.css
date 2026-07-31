@@ -1,0 +1,60 @@
+.nw-char-grid {
+  display: flex;
+  gap: 8px;
+  height: 180px;
+}
+
+.nw-char-large {
+  position: relative;
+  width: 42%;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.nw-char-smalls {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+
+.nw-char-small {
+  position: relative;
+  flex: 1;
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.nw-char-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--nw-text-2);
+  background: var(--nw-bg);
+  text-align: center;
+  padding: 4px;
+}
+
+.nw-char-tag {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  font-size: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.nw-char-accessory {
+  font-size: 11.5px;
+  color: var(--nw-text-2);
+  margin-top: 8px;
+}
+
+.nw-char-bible {
+  font-size: 12.5px;
+  line-height: 1.6;
+}

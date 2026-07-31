@@ -1,0 +1,248 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import type { AgentTurnRequest } from '../models/AgentTurnRequest';
+import type { ApiResponse_AgentTurnRead_ } from '../models/ApiResponse_AgentTurnRead_';
+import type { ApiResponse_AgentWorkspaceSnapshotRead_ } from '../models/ApiResponse_AgentWorkspaceSnapshotRead_';
+import type { ApiResponse_NoneType_ } from '../models/ApiResponse_NoneType_';
+import type { ApiResponse_PaginatedData_ProjectRead__ } from '../models/ApiResponse_PaginatedData_ProjectRead__';
+import type { ApiResponse_ProjectAssetLibraryRead_ } from '../models/ApiResponse_ProjectAssetLibraryRead_';
+import type { ApiResponse_ProjectFromPromptRead_ } from '../models/ApiResponse_ProjectFromPromptRead_';
+import type { ApiResponse_ProjectRead_ } from '../models/ApiResponse_ProjectRead_';
+import type { ApiResponse_ProjectStyleOptionsRead_ } from '../models/ApiResponse_ProjectStyleOptionsRead_';
+import type { ProjectCreate } from '../models/ProjectCreate';
+import type { ProjectFromPromptRequest } from '../models/ProjectFromPromptRequest';
+import type { ProjectUpdate } from '../models/ProjectUpdate';
+import type { CancelablePromise } from '../core/CancelablePromise';
+import { OpenAPI } from '../core/OpenAPI';
+import { request as __request } from '../core/request';
+export class StudioProjectsService {
+    /**
+     * 获取项目风格候选项
+     * @returns ApiResponse_ProjectStyleOptionsRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectStyleOptionsApiV1StudioProjectsStyleOptionsGet(): CancelablePromise<ApiResponse_ProjectStyleOptionsRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/style-options',
+        });
+    }
+    /**
+     * 项目列表（分页）
+     * @returns ApiResponse_PaginatedData_ProjectRead__ Successful Response
+     * @throws ApiError
+     */
+    public static listProjectsApiV1StudioProjectsGet({
+        q,
+        order,
+        isDesc = false,
+        page = 1,
+        pageSize = 10,
+    }: {
+        /**
+         * 关键字，过滤 name/description
+         */
+        q?: (string | null),
+        /**
+         * 排序字段
+         */
+        order?: (string | null),
+        /**
+         * 是否倒序
+         */
+        isDesc?: boolean,
+        page?: number,
+        pageSize?: number,
+    }): CancelablePromise<ApiResponse_PaginatedData_ProjectRead__> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects',
+            query: {
+                'q': q,
+                'order': order,
+                'is_desc': isDesc,
+                'page': page,
+                'page_size': pageSize,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 创建项目
+     * @returns ApiResponse_ProjectRead_ Successful Response
+     * @throws ApiError
+     */
+    public static createProjectApiV1StudioProjectsPost({
+        requestBody,
+    }: {
+        requestBody: ProjectCreate,
+    }): CancelablePromise<ApiResponse_ProjectRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 从首页提示词创建项目并启动剧情分析
+     * @returns ApiResponse_ProjectFromPromptRead_ Successful Response
+     * @throws ApiError
+     */
+    public static createProjectFromPromptApiV1StudioProjectsFromPromptPost({
+        requestBody,
+    }: {
+        requestBody: ProjectFromPromptRequest,
+    }): CancelablePromise<ApiResponse_ProjectFromPromptRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/from-prompt',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取 Agent 工作台快照
+     * @returns ApiResponse_AgentWorkspaceSnapshotRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectWorkspaceApiV1StudioProjectsProjectIdWorkspaceGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_AgentWorkspaceSnapshotRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}/workspace',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 提交 Agent 对话 turn
+     * @returns ApiResponse_AgentTurnRead_ Successful Response
+     * @throws ApiError
+     */
+    public static handleProjectAgentTurnApiV1StudioProjectsProjectIdAgentTurnsPost({
+        projectId,
+        requestBody,
+    }: {
+        projectId: string,
+        requestBody: AgentTurnRequest,
+    }): CancelablePromise<ApiResponse_AgentTurnRead_> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/studio/projects/{project_id}/agent/turns',
+            path: {
+                'project_id': projectId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取项目资产库
+     * @returns ApiResponse_ProjectAssetLibraryRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectAssetLibraryApiV1StudioProjectsProjectIdAssetLibraryGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_ProjectAssetLibraryRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}/asset-library',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 获取项目
+     * @returns ApiResponse_ProjectRead_ Successful Response
+     * @throws ApiError
+     */
+    public static getProjectApiV1StudioProjectsProjectIdGet({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_ProjectRead_> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/studio/projects/{project_id}',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 更新项目
+     * @returns ApiResponse_ProjectRead_ Successful Response
+     * @throws ApiError
+     */
+    public static updateProjectApiV1StudioProjectsProjectIdPatch({
+        projectId,
+        requestBody,
+    }: {
+        projectId: string,
+        requestBody: ProjectUpdate,
+    }): CancelablePromise<ApiResponse_ProjectRead_> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/studio/projects/{project_id}',
+            path: {
+                'project_id': projectId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * 删除项目
+     * @returns ApiResponse_NoneType_ Successful Response
+     * @throws ApiError
+     */
+    public static deleteProjectApiV1StudioProjectsProjectIdDelete({
+        projectId,
+    }: {
+        projectId: string,
+    }): CancelablePromise<ApiResponse_NoneType_> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/studio/projects/{project_id}',
+            path: {
+                'project_id': projectId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+}

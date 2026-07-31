@@ -1,0 +1,43 @@
+.nw-keyframe-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.nw-keyframe-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.nw-keyframe-index {
+  font-size: 11px;
+  color: var(--nw-text-2);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.nw-keyframe-spin {
+  animation: nw-spin 1s linear infinite;
+  display: inline-block;
+}
+
+.nw-keyframe-placeholder {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--nw-bg);
+  border-radius: 8px;
+}
+
+.nw-keyframe-error {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: #fdecea;
+  color: var(--nw-danger);
+  font-size: 10px;
+  border-radius: 8px;
+  padding: 4px;
+  overflow: hidden;
+}

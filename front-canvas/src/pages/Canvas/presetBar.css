@@ -1,0 +1,30 @@
+.nw-presetbar {
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px;
+  background: var(--nw-panel);
+  border-bottom: 1px solid var(--nw-divider);
+  overflow-x: auto;
+}
+
+.nw-presetbar-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nw-presetbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--nw-divider);
+  flex-shrink: 0;
+}
+
+.nw-preset-btn {
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 5px 10px;
+}

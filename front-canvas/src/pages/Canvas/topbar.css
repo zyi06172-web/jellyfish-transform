@@ -1,0 +1,82 @@
+.nw-topbar {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--nw-panel);
+  border-bottom: 1px solid var(--nw-divider);
+  z-index: 30;
+  position: relative;
+}
+
+.nw-topbar-left,
+.nw-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nw-topbar-logo {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  margin-right: 4px;
+}
+
+.nw-topbar-typebtn {
+  white-space: nowrap;
+}
+
+.nw-topbar-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: text;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nw-topbar-name:hover {
+  background: var(--nw-bg);
+}
+
+.nw-topbar-name-input {
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--nw-accent);
+  background: var(--nw-panel);
+  color: var(--nw-text-1);
+  max-width: 200px;
+}
+
+.nw-topbar-version {
+  font-size: 11px;
+  color: var(--nw-text-2);
+  background: var(--nw-bg);
+  padding: 2px 8px;
+  border-radius: var(--nw-radius-tag);
+}
+
+.nw-topbar-spend {
+  font-size: 12px;
+  color: var(--nw-text-2);
+}
+
+.nw-topbar-credits {
+  border: 1px solid var(--nw-divider);
+  background: var(--nw-bg);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--nw-text-1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -1,0 +1,14 @@
+.nw-floating-toolbar {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: var(--nw-panel);
+  border-radius: var(--nw-radius-overlay);
+  box-shadow: var(--nw-shadow);
+  padding: 5px;
+  z-index: 5;
+  animation: nw-pop-in 140ms var(--nw-ease);
+}

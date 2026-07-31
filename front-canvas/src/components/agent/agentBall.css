@@ -1,0 +1,97 @@
+.nw-ball-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.nw-ball {
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b98bff, #6a5bff 60%, #0071e3 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: grab;
+  pointer-events: auto;
+  box-shadow:
+    0 0 24px rgba(106, 91, 255, 0.55),
+    var(--nw-shadow);
+  animation: nw-breathe 3.2s ease-in-out infinite;
+  transition:
+    left 320ms var(--nw-ease),
+    top 320ms var(--nw-ease);
+  user-select: none;
+  touch-action: none;
+}
+
+.nw-ball.dragging {
+  cursor: grabbing;
+  transition: none;
+  animation: none;
+}
+
+@keyframes nw-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(106, 91, 255, 0.45),
+      var(--nw-shadow);
+  }
+  50% {
+    box-shadow:
+      0 0 34px rgba(106, 91, 255, 0.7),
+      var(--nw-shadow);
+  }
+}
+
+.nw-ball-dialog {
+  position: fixed;
+  width: 300px;
+  background: var(--nw-panel);
+  border-radius: var(--nw-radius-card);
+  box-shadow: var(--nw-shadow);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  animation: nw-dock-in 220ms var(--nw-ease);
+}
+
+.nw-ball-dialog-head {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--nw-divider);
+}
+
+.nw-ball-dialog-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nw-ball-dialog-input {
+  display: flex;
+  gap: 6px;
+  padding: 10px;
+  border-top: 1px solid var(--nw-divider);
+}
+
+.nw-ball-dialog-input input {
+  flex: 1;
+  border: 1px solid var(--nw-divider);
+  border-radius: var(--nw-radius-control);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  background: var(--nw-bg);
+  color: var(--nw-text-1);
+}

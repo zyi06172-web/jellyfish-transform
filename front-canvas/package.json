@@ -1,0 +1,41 @@
+{
+  "name": "nuwa-canvas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20 <23"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "preview": "vite preview --port 7799",
+    "openapi:fetch": "curl -sSf http://127.0.0.1:8000/openapi.json -o ./openapi.json",
+    "openapi:gen": "pnpm exec -- openapi --input ./openapi.json --output ./src/services/generated --client fetch --useOptions --useUnionTypes",
+    "openapi:update": "pnpm run openapi:fetch && pnpm run openapi:gen"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@xyflow/react": "^12.8.5",
+    "antd": "^5.22.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.54.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "openapi-typescript-codegen": "^0.30.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.4.0"
+  }
+}
