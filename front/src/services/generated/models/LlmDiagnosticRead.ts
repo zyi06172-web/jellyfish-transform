@@ -26,5 +26,13 @@ export type LlmDiagnosticRead = {
      * 被诊断的模型 ID
      */
     model_id?: (string | null);
+    /**
+     * 真实探测耗时（毫秒）
+     */
+    elapsed_ms?: (number | null);
+    /**
+     * 供应商返回的原始错误摘要
+     */
+    raw_error?: null;
 };
 

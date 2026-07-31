@@ -333,6 +333,7 @@ async def get_project_workspace(
 async def handle_project_agent_turn(
     project_id: str,
     body: AgentTurnRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> ApiResponse[AgentTurnRead]:
     await get_or_404(db, Project, project_id, detail=entity_not_found("Project"))
@@ -349,10 +350,14 @@ async def handle_project_agent_turn(
             content=body.input.choice_id,
             payload={"choice_id": body.input.choice_id, "idempotency_key": body.idempotency_key},
         )
+    current_session = await db.get(AgentSession, body.session_id)
     decision_llm = None
-    if body.input.type == "text" and body.input.text.strip():
-        llm = await build_default_text_llm(db, thinking=False)
-        decision_llm = LLMAgentTurnDecisionLLM(llm)
+    if body.input.type == "text" and body.input.text.strip() and current_session is not None:
+        if current_session.current_stage == AgentSessionStage.intake:
+            decision_llm = LLMAgentTurnDecisionLLM(None)
+        else:
+            llm = await build_default_text_llm(db, thinking=False)
+            decision_llm = LLMAgentTurnDecisionLLM(llm)
     agent = VideoCreationAgent(repository=repository, decision_llm=decision_llm)
     result = await agent.handle_turn(
         AgentTurnCommand(
@@ -369,13 +374,23 @@ async def handle_project_agent_turn(
     )
     if body.input.type == "choice" and result.stage == AgentSessionStage.storyboard:
         await db.commit()
-        from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
+        if os.getenv("NUWA_AGENT_CHAIN_DIRECT", "").strip() == "1":
+            from app.services.studio.agent.auto_elements_chain import run_agent_auto_elements_chain
 
-        enqueue_agent_auto_elements_chain(
-            project_id=project_id,
-            session_id=body.session_id,
-            idempotency_key=body.idempotency_key,
-        )
+            background_tasks.add_task(
+                run_agent_auto_elements_chain,
+                project_id=project_id,
+                session_id=body.session_id,
+                idempotency_key=body.idempotency_key,
+            )
+        else:
+            from app.tasks.agent_workflow import enqueue_agent_auto_elements_chain
+
+            enqueue_agent_auto_elements_chain(
+                project_id=project_id,
+                session_id=body.session_id,
+                idempotency_key=body.idempotency_key,
+            )
     for index, action in enumerate(result.actions):
         if action.action_type == AgentActionType.analyze and action.target_type == "project":
             await _persist_intake_script(
@@ -1083,8 +1098,23 @@ async def _build_canvas_shotlist_rows(db: AsyncSession, *, project_id: str) -> l
     return rows
 
 
+def _image_url_from_task_result(result: object) -> str | None:
+    """从生成任务结果中读取供应商返回的图片 URL，供本地无 S3 时继续引用同源图。"""
+    payload = _json_value(result, {}) if result is not None else {}
+    if not isinstance(payload, dict):
+        return None
+    images = payload.get("images")
+    if isinstance(images, list):
+        for image in images:
+            if isinstance(image, dict) and image.get("url"):
+                return str(image["url"])
+    if payload.get("url"):
+        return str(payload["url"])
+    return None
+
+
 async def _file_url_for_task(db: AsyncSession, *, task_id: str) -> str | None:
-    """读取任务关联文件的下载 URL。"""
+    """读取同一生成任务产物 URL；优先文件库，缺文件时回退到任务结果里的供应商 URL。"""
     link = (
         await db.execute(
             select(GenerationTaskLink)
@@ -1092,7 +1122,10 @@ async def _file_url_for_task(db: AsyncSession, *, task_id: str) -> str | None:
             .limit(1)
         )
     ).scalars().first()
-    return download_url(link.file_id) if link is not None and link.file_id else None
+    if link is not None and link.file_id:
+        return download_url(link.file_id)
+    task = await db.get(GenerationTask, task_id)
+    return _image_url_from_task_result(task.result) if task is not None else None
 
 
 async def _build_canvas_render_rows(db: AsyncSession, *, project_id: str) -> list[dict]:

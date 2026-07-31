@@ -28,6 +28,7 @@ type NodeLayoutProps = {
 }
 
 type NodeOpsCarrier = {
+  __compact?: boolean
   __ops?: {
     copy: (nodeId: string) => void
     focus: (nodeId: string) => void
@@ -60,11 +61,13 @@ function NodeLayoutBase({
   const [dataOpen, setDataOpen] = useState(false)
   const canInspect = import.meta.env.DEV
   const mergedToolbar = useMemo(() => toolbar, [toolbar])
-  const ops = (data as NodeOpsCarrier | null)?.__ops
+  const nodeMeta = data as NodeOpsCarrier | null
+  const ops = nodeMeta?.__ops
+  const compact = nodeMeta?.__compact === true
 
   return (
     <div
-      className={`nuwa-node-shell ${selected ? 'nuwa-node-shell-selected' : ''} ${status === 'error' ? 'nuwa-node-shell-error' : ''}`}
+      className={`nuwa-node-shell ${compact ? 'nuwa-node-shell-compact' : ''} ${selected ? 'nuwa-node-shell-selected' : ''} ${status === 'error' ? 'nuwa-node-shell-error' : ''}`}
       style={{ width }}
       onContextMenu={(event) => {
         event.preventDefault()
@@ -83,10 +86,12 @@ function NodeLayoutBase({
           <span className="nuwa-node-type">{type}</span>
         </Tooltip>
       </div>
-      <div className="nuwa-node-body">
-        {status === 'loading' ? <NodeLoadingState /> : null}
-        {status === 'error' ? <NodeErrorState message={errorMessage || ''} onRetry={onRetry} /> : children}
-      </div>
+      {compact ? null : (
+        <div className="nuwa-node-body">
+          {status === 'loading' ? <NodeLoadingState /> : null}
+          {status === 'error' ? <NodeErrorState message={errorMessage || ''} onRetry={onRetry} /> : children}
+        </div>
+      )}
       <div className="nuwa-node-footer">
         <span>{id.slice(0, 18)}</span>
         {cost?.cny ? <span>≈¥{cost.cny.toFixed(2)}</span> : null}

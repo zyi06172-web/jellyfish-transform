@@ -125,10 +125,11 @@ async def test_auto_elements_chain_calls_existing_steps_in_order_and_prompts_bef
             assert request.element.kind == "scene"
             return "婚礼宴会厅场景参考图，9:16，无画面文字。"
 
-        async def fake_image(_db: AsyncSession, target: ElementImageTarget, prompt: str) -> str:
+        async def fake_image(_db: AsyncSession, target: ElementImageTarget, prompt: str, target_ratio: str) -> str:
             calls.append("image")
             assert target.kind in {"character", "scene"}
             assert "无画面文字" in prompt
+            assert target_ratio == "9:16"
             task_id = f"image-task-{len([item for item in calls if item == 'image'])}"
             _db.add(
                 GenerationTask(

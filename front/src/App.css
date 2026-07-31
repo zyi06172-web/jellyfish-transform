@@ -357,6 +357,14 @@
   border-color: rgba(248, 113, 113, 0.72);
 }
 
+.nuwa-node-shell-compact {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+}
+
+.nuwa-node-shell-compact .nuwa-node-header {
+  min-height: 40px;
+}
+
 .nuwa-node-header {
   display: flex;
   min-height: 48px;

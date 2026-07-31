@@ -56,7 +56,8 @@ async def test_diagnose_provider_connection_uses_models_endpoint(monkeypatch: py
 @pytest.mark.asyncio
 async def test_diagnose_model_generation_reports_unknown_model(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == "/v1/models/not-real"
+        assert request.url.path == "/v1/chat/completions"
+        assert request.read()
         return httpx.Response(404, json={"error": {"message": "model not found"}})
 
     _patch_httpx_client(monkeypatch, httpx.MockTransport(handler))
@@ -69,6 +70,7 @@ async def test_diagnose_model_generation_reports_unknown_model(monkeypatch: pyte
         result = await diagnose_model_generation(db, model_id="m1")
 
         assert result.status == "error"
-        assert "模型名称" in result.message
-        assert result.checked_url == "https://api.example.com/v1/models/not-real"
+        assert "HTTP 404" in result.message
+        assert result.checked_url == "https://api.example.com/v1/chat/completions"
+        assert result.raw_error["error"]["message"] == "model not found"
     await engine.dispose()

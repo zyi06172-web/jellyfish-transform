@@ -97,6 +97,7 @@ export function CanvasBoard({
   const [hydrated, setHydrated] = useState(false)
   const [agentCollapsed, setAgentCollapsed] = useState(false)
   const [shotlistPreviewOpen, setShotlistPreviewOpen] = useState(false)
+  const [compactRender, setCompactRender] = useState(DEFAULT_VIEWPORT.zoom < 0.5)
   const modelStatus = useCanvasModelStatus()
   const canvasId = chapterId ? `chapter:${chapterId}` : `project:${projectId}`
   const aspectRatio = project?.default_video_ratio || DEFAULT_CANVAS_RATIO
@@ -323,8 +324,12 @@ export function CanvasBoard({
 
   const renderedNodes = useMemo(() => nodes.map((node) => ({
     ...node,
-    data: { ...node.data, __ops: operations },
-  })), [nodes, operations])
+    data: { ...node.data, __compact: compactRender, __ops: operations },
+  })), [compactRender, nodes, operations])
+
+  const handleMove = useCallback((_: unknown, viewport: Viewport) => {
+    setCompactRender(viewport.zoom < 0.5)
+  }, [])
 
   if (!hydrated) return <div className="flex h-full items-center justify-center bg-black"><Spin /></div>
 
@@ -339,9 +344,11 @@ export function CanvasBoard({
         maxZoom={2}
         selectionOnDrag
         panOnScroll
+        onlyRenderVisibleElements
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onMove={handleMove}
         onMoveEnd={() => saveCanvas(nodes, edges)}
       >
         <Background color="rgba(255,255,255,.11)" gap={28} variant={BackgroundVariant.Dots} />

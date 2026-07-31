@@ -80,6 +80,8 @@ class LlmDiagnosticRead(BaseModel):
     checked_url: str | None = Field(None, description="本次诊断访问的脱敏 URL")
     provider: str | None = Field(None, description="供应商稳定键")
     model_id: str | None = Field(None, description="被诊断的模型 ID")
+    elapsed_ms: int | None = Field(None, description="真实探测耗时（毫秒）")
+    raw_error: Any | None = Field(None, description="供应商返回的原始错误摘要")
 
 
 class VideoGenerationOptionsRead(BaseModel):
