@@ -1,0 +1,163 @@
+.nw-asset-panel .ant-tabs {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.nw-asset-panel .ant-tabs-content-holder {
+  overflow-y: auto;
+}
+
+.nw-asset-body {
+  padding: 12px 16px;
+}
+
+.nw-asset-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.nw-asset-typebar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.nw-asset-typechip {
+  border: 1px solid var(--nw-divider);
+  background: transparent;
+  color: var(--nw-text-2);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.nw-asset-typechip.active {
+  background: var(--nw-accent-weak);
+  color: var(--nw-accent);
+  border-color: transparent;
+}
+
+.nw-asset-grid {
+  display: grid;
+  gap: 10px;
+}
+.view-large .nw-asset-grid {
+  grid-template-columns: repeat(1, 1fr);
+}
+.view-medium .nw-asset-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+.view-small .nw-asset-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.nw-asset-card {
+  position: relative;
+  background: var(--nw-panel-2);
+  border-radius: 10px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+.nw-asset-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--nw-panel);
+  display: block;
+}
+.nw-asset-thumb-empty {
+  background: repeating-linear-gradient(45deg, var(--nw-panel), var(--nw-panel) 6px, var(--nw-panel-2) 6px, var(--nw-panel-2) 12px);
+}
+
+.nw-asset-name {
+  font-size: 12px;
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nw-asset-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.nw-asset-type {
+  font-size: 10px;
+  color: var(--nw-text-2);
+}
+
+.nw-asset-trash-btn {
+  border: none;
+  background: transparent;
+  color: var(--nw-text-2);
+  cursor: pointer;
+  font-size: 12px;
+}
+.nw-asset-trash-btn:hover {
+  color: var(--nw-danger);
+}
+
+.nw-asset-empty-block {
+  padding: 30px 16px;
+  text-align: center;
+}
+.nw-asset-empty-hint {
+  font-size: 12px;
+  color: var(--nw-text-2);
+  margin-top: 8px;
+  line-height: 1.6;
+}
+
+.nw-asset-empty-trash {
+  width: 100%;
+  border: 1px solid var(--nw-danger);
+  color: var(--nw-danger);
+  background: var(--nw-danger-weak);
+  border-radius: var(--nw-radius-control);
+  padding: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.nw-asset-trash-card .nw-asset-trash-meta {
+  font-size: 10px;
+  color: var(--nw-text-2);
+  margin-top: 2px;
+}
+
+.nw-asset-trash-hover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  opacity: 0;
+  transition: opacity var(--nw-dur) var(--nw-ease);
+}
+.nw-asset-trash-card:hover .nw-asset-trash-hover {
+  opacity: 1;
+}
+
+.nw-asset-filter {
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-asset-filter-title {
+  font-size: 12px;
+  color: var(--nw-text-2);
+  margin-top: 6px;
+}

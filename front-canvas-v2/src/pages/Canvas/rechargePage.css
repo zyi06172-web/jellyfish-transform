@@ -1,0 +1,158 @@
+.nw-recharge {
+  color: var(--nw-text-1);
+}
+
+.nw-recharge-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.nw-recharge-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+.nw-recharge-sub {
+  font-size: 12px;
+  color: var(--nw-text-2);
+  margin-top: 4px;
+}
+
+.nw-recharge-balance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--nw-panel-2);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.nw-recharge-balance-label {
+  font-size: 12px;
+  color: var(--nw-text-2);
+}
+.nw-recharge-balance-num {
+  font-size: 30px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.nw-recharge-records {
+  border: none;
+  background: transparent;
+  color: var(--nw-accent);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.nw-recharge-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0 10px;
+}
+
+.nw-recharge-pkgs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.nw-recharge-pkg {
+  position: relative;
+  border: 1.5px solid var(--nw-divider);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color var(--nw-dur) var(--nw-ease);
+}
+.nw-recharge-pkg:hover {
+  border-color: var(--nw-text-2);
+}
+.nw-recharge-pkg.active {
+  border-color: var(--nw-accent);
+  background: var(--nw-accent-weak);
+}
+.nw-recharge-pkg.recommended {
+  border-color: var(--nw-accent);
+}
+.nw-recharge-pkg-tag {
+  position: absolute;
+  top: -9px;
+  right: 12px;
+  font-size: 10px;
+  background: var(--nw-accent);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.nw-recharge-pkg-credits {
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-recharge-pkg-bonus {
+  font-size: 11px;
+  color: #ffb340;
+  margin-top: 2px;
+}
+.nw-recharge-pkg-price {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.nw-recharge-pkg-unit {
+  font-size: 11px;
+  color: var(--nw-text-2);
+  margin-top: 2px;
+}
+
+.nw-recharge-pays {
+  display: flex;
+  gap: 10px;
+}
+.nw-recharge-pay {
+  flex: 1;
+  border: 1.5px solid var(--nw-divider);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.nw-recharge-pay.active {
+  border-color: var(--nw-accent);
+  color: var(--nw-accent);
+}
+.nw-recharge-pay-icon {
+  font-size: 16px;
+}
+
+.nw-recharge-note {
+  font-size: 11.5px;
+  color: var(--nw-text-2);
+  line-height: 1.7;
+  background: var(--nw-panel-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 16px 0;
+}
+
+.nw-recharge-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-recharge-summary {
+  font-size: 13px;
+  color: var(--nw-text-2);
+}
+.nw-recharge-summary b {
+  color: var(--nw-text-1);
+  font-size: 16px;
+}
+.nw-recharge-pay-btn {
+  padding: 10px 28px;
+  font-size: 15px;
+}

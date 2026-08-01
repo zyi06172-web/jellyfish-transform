@@ -1,0 +1,60 @@
+.nw-canvas-page {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--nw-bg);
+  overflow: hidden;
+}
+
+.nw-canvas-stage {
+  flex: 1;
+  position: relative;
+}
+
+.nw-canvas-loading {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nw-canvas-wrapper {
+  position: relative;
+  cursor: default;
+}
+
+.nw-canvas-wrapper .react-flow,
+.nw-canvas-wrapper .react-flow__pane,
+.nw-canvas-wrapper .react-flow__node {
+  cursor: default;
+}
+
+.nw-canvas-wrapper .react-flow__pane.dragging,
+.nw-canvas-wrapper .react-flow__node.dragging {
+  cursor: grabbing;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__controls {
+  box-shadow: var(--nw-shadow);
+  border-radius: var(--nw-radius-control);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--nw-panel) !important;
+  border-bottom: 1px solid var(--nw-divider) !important;
+  color: var(--nw-text-1) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--nw-bg) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: var(--nw-text-1) !important;
+}

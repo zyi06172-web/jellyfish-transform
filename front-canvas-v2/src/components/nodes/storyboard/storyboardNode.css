@@ -1,0 +1,43 @@
+.nw-storyboard-page {
+  width: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  background: var(--nw-bg);
+}
+
+.nw-storyboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.nw-storyboard-cell {
+  background: var(--nw-bg);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 11.5px;
+  min-height: 54px;
+}
+
+.nw-storyboard-cell.blank {
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nw-storyboard-index {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.nw-storyboard-summary {
+  color: var(--nw-text-2);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

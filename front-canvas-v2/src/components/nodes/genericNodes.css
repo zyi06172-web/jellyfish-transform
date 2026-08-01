@@ -1,0 +1,152 @@
+.nw-node-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 0;
+  color: var(--nw-text-2);
+  font-size: 12.5px;
+}
+
+.nw-text-preview {
+  font-size: 13px;
+  line-height: 1.6;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.nw-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.nw-media-thumb {
+  width: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--nw-bg);
+  aspect-ratio: 16 / 9;
+}
+
+.nw-media-thumb-wrap {
+  position: relative;
+}
+
+.nw-video-preview {
+  width: 100%;
+  border-radius: 10px;
+  background: #000;
+}
+
+.nw-video-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.nw-script-raw {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nw-text-2);
+  background: var(--nw-bg);
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.nw-link-btn {
+  background: none;
+  border: none;
+  color: var(--nw-accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 0 0 6px;
+}
+
+.nw-script-divider {
+  font-size: 11px;
+  color: var(--nw-text-2);
+  margin: 10px 0 4px;
+}
+
+.nw-script-analysis {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--nw-divider);
+  border-radius: 8px;
+  background: var(--nw-bg);
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.nw-script-analysis div {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.nw-script-analysis b {
+  color: var(--nw-text-2);
+  font-weight: 600;
+}
+
+.nw-script-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 3px 0;
+}
+.nw-script-row .ok {
+  color: #1fa971;
+}
+.nw-script-row .pending {
+  color: #e08a2b;
+}
+
+.nw-shotgroup-warn {
+  font-size: 12px;
+  color: #b8790c;
+  background: #fdf3e2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.nw-shotgroup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nw-shotgroup-row {
+  display: flex;
+  gap: 14px;
+  font-size: 12.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--nw-divider);
+  flex-wrap: wrap;
+}
+
+.nw-shotgroup-name {
+  font-weight: 600;
+  min-width: 72px;
+}
+
+.nw-shotgroup-axis {
+  color: var(--nw-text-2);
+}
+
+.nw-gate-hint {
+  font-size: 12px;
+  color: var(--nw-text-2);
+  background: var(--nw-bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.6;
+}

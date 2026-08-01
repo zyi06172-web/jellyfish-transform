@@ -1,0 +1,56 @@
+.nw-breakdown-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nw-breakdown-role {
+  width: fit-content;
+  border: 1px solid var(--nw-divider);
+  border-radius: var(--nw-radius-tag);
+  padding: 3px 9px;
+  color: var(--nw-text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nw-breakdown-input textarea {
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--nw-divider);
+  border-radius: var(--nw-radius-control);
+  background: var(--nw-bg);
+  color: var(--nw-text-1);
+  padding: 10px 12px;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.nw-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.nw-breakdown-table th,
+.nw-breakdown-table td {
+  border-bottom: 1px solid var(--nw-divider);
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.nw-breakdown-table th {
+  color: var(--nw-text-2);
+  font-weight: 600;
+}
+
+.nw-breakdown-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--nw-text-2);
+  font-size: 12px;
+}

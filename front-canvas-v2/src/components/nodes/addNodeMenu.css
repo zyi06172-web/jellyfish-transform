@@ -1,0 +1,39 @@
+.nw-add-menu {
+  position: fixed;
+  z-index: 999;
+  background: var(--nw-panel);
+  border-radius: var(--nw-radius-overlay);
+  box-shadow: var(--nw-shadow);
+  padding: 10px;
+  width: 260px;
+  animation: nw-pop-in 160ms var(--nw-ease);
+}
+
+.nw-add-menu-group-title {
+  font-size: 11px;
+  color: var(--nw-text-2);
+  padding: 6px 8px 2px;
+}
+
+.nw-add-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.nw-add-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--nw-text-1);
+}
+
+.nw-add-menu-item:hover {
+  background: var(--nw-bg);
+  color: var(--nw-accent);
+}

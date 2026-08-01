@@ -1,0 +1,30 @@
+.nw-history-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.nw-history-item {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--nw-panel-2);
+}
+
+.nw-history-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.nw-history-caption {
+  font-size: 10px;
+  color: var(--nw-text-2);
+  padding: 4px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

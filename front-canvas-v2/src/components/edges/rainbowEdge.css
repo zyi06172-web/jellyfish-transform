@@ -1,0 +1,12 @@
+.nw-rainbow-flow {
+  stroke: url(#nw-rainbow-gradient);
+  stroke-dasharray: 8 14;
+  animation: nw-rainbow-dash 1.6s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes nw-rainbow-dash {
+  to {
+    stroke-dashoffset: -220;
+  }
+}

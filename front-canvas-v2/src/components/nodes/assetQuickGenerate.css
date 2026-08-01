@@ -1,0 +1,46 @@
+.nw-asset-quick {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--nw-divider);
+  border-radius: var(--nw-radius-control);
+  background: var(--nw-bg);
+  padding: 12px;
+}
+
+.nw-asset-arrow {
+  position: absolute;
+  right: 10px;
+  top: -16px;
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff7d6, #ffc857);
+  color: #1c1c1e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.nw-asset-arrow:hover {
+  transform: translateY(-1px) scale(1.04);
+}
+
+.nw-asset-desc {
+  color: var(--nw-text-1);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding-right: 34px;
+}
+
+.nw-asset-quick textarea {
+  min-height: 64px;
+  resize: vertical;
+  border: 1px solid var(--nw-divider);
+  border-radius: 8px;
+  background: var(--nw-panel);
+  color: var(--nw-text-1);
+  padding: 8px 10px;
+  font-family: inherit;
+}
